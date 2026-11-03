@@ -1,0 +1,12 @@
+{
+  "appId": "app.brucecare.tracker",
+  "appName": "Bruce Care",
+  "webDir": "www",
+  "backgroundColor": "#ffffff",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_paw",
+      "iconColor": "#111111"
+    }
+  }
+}

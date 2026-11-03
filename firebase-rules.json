@@ -1,0 +1,12 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "dogcare": {
+      "$code": {
+        ".read": "$code.length >= 8",
+        ".write": "$code.length >= 8"
+      }
+    }
+  }
+}
