@@ -43,21 +43,26 @@ jobs:
       - name: Sync web app into Android project
         run: npx cap sync android
 
-      - name: Use the fixed signing key
+      - name: Fixed signing key and version number
         run: |
-          mkdir -p ~/.android
-          cp debug.keystore ~/.android/debug.keystore
+          G=android/app/build.gradle
+          sed -i 's#^android {#android {\n    signingConfigs {\n        debug {\n            storeFile file("../../debug.keystore")\n            storePassword "android"\n            keyAlias "androiddebugkey"\n            keyPassword "android"\n        }\n    }#' "$G"
+          sed -i 's#versionCode 1#versionCode ${{ github.run_number }}#; s#versionName "1.0"#versionName "1.${{ github.run_number }}"#' "$G"
+          sed -n 1,22p "$G"
 
       - name: Build APK
         working-directory: android
         run: ./gradlew assembleDebug
+
+      - name: Show signing fingerprint (should be the same every build)
+        run: keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | grep -i "SHA256" || true
 
       - uses: actions/upload-artifact@v4
         with:
           name: bruce-care-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Publish as the latest release
+      - name: Publish as the "latest" release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
