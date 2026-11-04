@@ -139,7 +139,6 @@ h2.sh{font-size:20px;font-weight:600;letter-spacing:-.03em;text-transform:none;c
 </style>
 </head>
 <body>
-<div id="toast" role="alert"></div>
 <div id="ed" role="dialog" aria-modal="true"></div>
 <div class="mb" id="namebox"><div class="md" role="dialog" aria-modal="true" aria-labelledby="nmt">
   <p class="t" id="nmt">What’s your name?</p>
@@ -334,7 +333,7 @@ function sub(x){
   else if(x.grp){var lm=lateMin(x);if(lm)p.push("Overdue "+dur(lm))}
   if(snoozed[x.id]>Date.now())p.push("Snoozed until "+new Date(snoozed[x.id]).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}));
   return p.filter(Boolean).join(" · ")}
-function msg(x){return x.note?x.note:x.rec?"Due today · "+x.dose:x.dom?"Monthly · due today · "+x.dose:x.type==="Meal"?"Time to eat":x.dose||"Time to give"}
+function msg(x){return x.note?x.note:x.rec?"Last injection "+lastTxt(x)+". Next one is due.":x.dom?"Monthly · due today · "+x.dose:x.type==="Meal"?"Time to eat":x.dose||"Time to give"}
 function mm(x){return x.type==="Medication"&&!x.dom&&!x.rec&&!!x.t}
 function medShow(x){
   if(x.dyn){var n=Date.now();return n>=x.ts-144e5}
@@ -361,12 +360,12 @@ function loadSample(){
   S.items.forEach(function(x){if(/breakfast/i.test(x.n))x.done=dayKey(x)});
 }
 function complete(x){
-  x.done=dayKey(x);
+  x.booked=0;x.done=dayKey(x);
   S.log.unshift({n:x.n,type:x.type,by:S.me,at:r15(Date.now())});
   S.log=S.log.slice(0,200);save();render();
 }
 function skip(x){
-  x.done=dayKey(x);
+  x.booked=0;x.done=dayKey(x);
   S.log.unshift({n:x.n,type:x.type,by:S.me,at:r15(Date.now()),skipped:1});
   S.log=S.log.slice(0,200);save();render();
 }
@@ -554,26 +553,6 @@ function renderMain(){
     rc.append(row);
   });
 }
-
-function notify(x,real){
-  var t=$("toast");t.textContent="";
-  var r=el("div","row");
-  var done=el("button","primary","Done");
-  done.onclick=function(){if(real)complete(x);t.classList.remove("on")};
-  r.append(done);
-  var sn=el("div","row");sn.style.alignItems="center";
-  sn.append(el("span","empty","Snooze"));
-  [30,60,90,120].forEach(function(m){
-    var b=el("button","",m<60?m+" min":(m/60)+" h");
-    b.setAttribute("aria-label","Snooze "+x.n+" for "+(m<60?m+" minutes":(m/60)+" hours"));
-    b.onclick=function(){if(real){snoozed[x.id]=Date.now()+m*60000;render()}t.classList.remove("on")};
-    sn.append(b)});
-  var cl=el("button","quiet","Dismiss");cl.onclick=function(){t.classList.remove("on")};
-  sn.append(cl);
-  t.append(el("p","",nm()+": "+x.n),el("p","empty",msg(x)),r,sn);
-  t.classList.toggle("hot",!!(x.dom||x.rec||x.hot));t.classList.add("on");
-}
-
 
 function iso(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
 function pd(t){var p=t.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
@@ -777,11 +756,12 @@ function plan(){
   var out=[],now=Date.now(),nd=new Date(),H=36e5,cnt={};
   function at(off,t){var m=mins(t);return new Date(nd.getFullYear(),nd.getMonth(),nd.getDate()+off,Math.floor(m/60),m%60).getTime()}
   function nxt(t){var a=at(0,t);return a>now?a:at(1,t)}
-  function add(x,w,body,act,end){if(w>now&&w<now+45*864e5){var c=cnt[x.id]=Math.min((cnt[x.id]||0)+1,99);out.push({at:w,id:x.id,nid:2000+x.id*100+c,title:nm()+": "+x.n,body:body,act:act!==false,end:end||0})}}
+  function lateLbl(m){m=Math.max(1,Math.round(m));return(m>=60?Math.round(m/60)+(Math.round(m/60)===1?" hour":" hours"):m+" min")+" late"}
+  function add(x,w,body,act,end,ttl,bt){if(w>now&&w<now+45*864e5){var c=cnt[x.id]=Math.min((cnt[x.id]||0)+1,99);out.push({at:w,id:x.id,nid:2000+x.id*100+c,title:nm()+": "+(ttl||(x.rec?"Book Pentosan appointment":x.n)),body:body,act:act!==false,end:end||0,typ:x.rec?"BOOK":bt?"BUNDLE":"DUE"})}}
   S.items.forEach(function(x){
     var od=(x.dose?" · "+x.dose:"");
     if(x.dom||x.rec){
-      var due=x.rec?recDue(x):nextDue(x);if(!due)return;
+      if(x.rec&&x.booked)return;var due=x.rec?recDue(x):nextDue(x);if(!due)return;
       var T=new Date(due.getFullYear(),due.getMonth(),due.getDate(),Math.floor(mins(x.t)/60),mins(x.t)%60).getTime();
       if(T>now)add(x,T,msg(x));
       else if(open(x)){var n1=nxt(x.t);add(x,n1,msg(x));add(x,n1+864e5,msg(x))}
@@ -790,11 +770,19 @@ function plan(){
     }else if(x.grp){
       if(x.dyn){
         if(!(x.ts>0))return;
-        [x.ts,x.ts+2*H,x.ts+3*H].forEach(function(w,i){add(x,w,i?"Overdue"+od:msg(x))});
-        if(open(x)&&x.ts+3*H<=now)add(x,Math.ceil(now/H)*H,"Overdue"+od);
+        [x.ts,x.ts+2*H,x.ts+3*H].forEach(function(w,i){if(i)add(x,w,x.dose||"Time to give",true,0,x.n+", "+lateLbl(i===1?120:180));else add(x,w-4*H,msg(x))});
+        if(open(x)&&x.ts+3*H<=now)add(x,Math.ceil(now/H)*H,x.dose||"Time to give",true,0,x.n+", "+lateLbl((Math.ceil(now/H)*H-x.ts)/6e4));
       }else{
-        [0,1,2].forEach(function(d){if(d===0&&!open(x))return;add(x,at(d,x.t),msg(x))});
-        if(open(x))add(x,at(0,x.e),"Overdue"+od);
+        var bd=medBundle(x);
+        if(bd){
+          if(bd.items[0]!==x)return;
+          [0,1,2].forEach(function(d){var lst=d===0?bd.items.filter(open):bd.items;if(lst.length)add(x,at(d,x.s),bundleBody(lst),true,0,bd.title,1)});
+          var op=bd.items.filter(open);
+          if(op.length)add(x,at(0,x.e),bundleBody(op),true,0,bd.title+", "+lateLbl(((mins(x.e)-mins(x.t))+1440)%1440),1);
+        }else{
+          [0,1,2].forEach(function(d){if(d===0&&!open(x))return;add(x,at(d,x.s),msg(x))});
+          if(open(x))add(x,at(0,x.e),x.dose||"Time to give",true,0,x.n+", "+lateLbl(((mins(x.e)-mins(x.t))+1440)%1440));
+        }
       }
     }
   });
@@ -807,6 +795,13 @@ function plan(){
   out.forEach(function(p){if(!p.act)return;if(lastOf[p.id])lastOf[p.id].to=Math.max(p.at-lastOf[p.id].at,6e4);lastOf[p.id]=p});
   out.forEach(function(p){if(p.end&&p.end>p.at){var m=Math.max(p.end-p.at,6e4);p.to=p.to?Math.min(p.to,m):m}});
   return out}
+function medBundle(x){
+  if(!x.grp||x.dyn||!x.t||x.type!=="Medication")return null;
+  var its=S.items.filter(function(i){return i.grp&&!i.dyn&&i.type==="Medication"&&i.slot===x.slot&&i.t===x.t}).sort(function(a,b){return a.id-b.id});
+  if(its.length<2)return null;
+  return{items:its,title:x.slot==="PM"?"Evening meds":x.slot==="AM"?"Morning meds":"Meds"}}
+function bundleBody(l){return l.map(function(i){return(i.grp||i.n)+(i.dose?" "+i.dose:"")}).join(" · ")}
+function openN(x){var b=medBundle(x);return b?b.items.some(open):open(x)}
 function itemOfId(i){
   var xid=i>=2000&&i<500000?Math.floor((i-2000)/100):(i>=1000&&i<2000?i-1000:null);
   return xid==null?null:(S.items.filter(function(x){return x.id===xid})[0]||false)}
@@ -818,31 +813,33 @@ function nativeSync(){
   LN.getPending().then(function(r){
     var ids=(r.notifications||[]).filter(function(n){
       var i=+n.id;if(i<1000||i>=2000)return true;
-      var x=itemOfId(i);return!x||!open(x)}).map(function(n){return{id:n.id}});
+      var x=itemOfId(i);return!x||!openN(x)}).map(function(n){return{id:n.id}});
     return ids.length?LN.cancel({notifications:ids}):0})
   .then(function(){
     var list=pl.map(function(p){return{id:p.nid,title:p.title,body:p.body,channelId:CH,smallIcon:"ic_stat_paw",
       ongoing:!!p.act,autoCancel:!p.act,
-      actionTypeId:p.act?"DUE":undefined,extra:{id:p.id,timeoutMs:p.to||0},schedule:{at:new Date(p.at),allowWhileIdle:true}}});
+      actionTypeId:p.act?p.typ:undefined,extra:{id:p.id,timeoutMs:p.to||0},schedule:{at:new Date(p.at),allowWhileIdle:true}}});
     return list.length?LN.schedule({notifications:list}):0})
   .then(function(){
     return LN.getDeliveredNotifications().then(function(r){
-      var rm=(r.notifications||[]).filter(function(n){var x=itemOfId(+n.id);return x===false||(x&&!open(x))}).map(function(n){return{id:n.id}});
+      var rm=(r.notifications||[]).filter(function(n){var x=itemOfId(+n.id);return x===false||(x&&!openN(x))}).map(function(n){return{id:n.id}});
       return rm.length?LN.removeDeliveredNotifications({notifications:rm}):0})})
   .then(function(){nsSig=sig}).catch(function(){}).then(function(){nsBusy=false})}
 function snoozeNative(x,m){
   if(!LN)return;
-  LN.schedule({notifications:[{id:1000+x.id,title:nm()+": "+x.n,body:"Snoozed · "+msg(x),channelId:CH,smallIcon:"ic_stat_paw",actionTypeId:"DUE",
+  var bd=medBundle(x),ti=bd?bd.title:(x.rec?"Book Pentosan appointment":x.n),bo=bd?"Snoozed · "+bundleBody(bd.items.filter(open)):(x.rec?msg(x):"Snoozed · "+msg(x));
+  LN.schedule({notifications:[{id:1000+x.id,title:nm()+": "+ti,body:bo,channelId:CH,smallIcon:"ic_stat_paw",actionTypeId:x.rec?"BOOK":bd?"BUNDLE":"DUE",
     ongoing:true,autoCancel:false,extra:{id:x.id},schedule:{at:new Date(Date.now()+m*6e4),allowWhileIdle:true}}]}).catch(function(){})}
 if(LN){try{
   LN.createChannel({id:CH,name:"Reminders",description:"Meals, medication, injections and vet visits",importance:4,visibility:1,vibration:true}).catch(function(){});
-  LN.registerActionTypes({types:[{id:"DUE",actions:[{id:"done",title:"Done"},{id:"snooze",title:"Snooze 30 min"}]}]}).catch(function(){});
+  LN.registerActionTypes({types:[{id:"DUE",actions:[{id:"done",title:"Done"},{id:"snooze",title:"Snooze 30 min"}]},{id:"BUNDLE",actions:[{id:"done",title:"Done all"},{id:"snooze",title:"Snooze 30 min"}]},{id:"BOOK",actions:[{id:"booked",title:"Booked"},{id:"tomorrow",title:"Remind tomorrow"}]}]}).catch(function(){});
   LN.addListener("localNotificationActionPerformed",function(ev){
     var id=ev&&ev.notification&&ev.notification.extra&&ev.notification.extra.id,x=S.items.filter(function(i){return i.id===id})[0];
     if(!x)return;
-    if(ev.actionId==="done"){if(open(x))complete(x)}
+    if(ev.actionId==="done"){var bl=medBundle(x);if(bl)bl.items.filter(open).forEach(complete);else if(open(x))complete(x)}
     else if(ev.actionId==="snooze")snoozeNative(x,30);
-    if((ev.actionId==="done"||ev.actionId==="snooze")&&ev.notification&&ev.notification.id!=null)LN.removeDeliveredNotifications({notifications:[{id:ev.notification.id}]}).catch(function(){})});
+    else if(ev.actionId==="booked"){x.booked=ymd(new Date());save();LN.cancel({notifications:[{id:1000+x.id}]}).catch(function(){}).then(function(){nsSig="";nativeSync()})}
+    if((ev.actionId==="done"||ev.actionId==="snooze"||ev.actionId==="booked"||ev.actionId==="tomorrow")&&ev.notification&&ev.notification.id!=null)LN.removeDeliveredNotifications({notifications:[{id:ev.notification.id}]}).catch(function(){})});
   LN.checkPermissions().then(function(p){return p.display==="granted"?p:LN.requestPermissions()})
     .then(function(){return LN.checkExactNotificationSetting?LN.checkExactNotificationSetting().then(function(r){if(r&&r.exact_alarm&&r.exact_alarm!=="granted"&&LN.changeExactNotificationSetting)return LN.changeExactNotificationSetting()}):0})
     .then(function(){nsSig="";nativeSync()}).catch(function(){nsSig="";nativeSync()});
@@ -856,7 +853,7 @@ function completeAt(x,ts){
   if(!x.dom&&!x.rec)S.log=S.log.filter(function(e){if(e.n===x.n&&e.skipped&&ekey(e)===k){S.del[tk("l",lkey(e))]=Date.now();return false}return true});
   S.log.push(ne);srt();
   var d=new Date(at);
-  if(x.dom||x.rec){var d0=new Date(d.getFullYear(),d.getMonth(),d.getDate());if(!x.done||d0>=dd(x.done))x.done=ymd(d0)}
+  if(x.rec)x.booked=0;if(x.dom||x.rec){var d0=new Date(d.getFullYear(),d.getMonth(),d.getDate());if(!x.done||d0>=dd(x.done))x.done=ymd(d0)}
   else if(k===iso(pd(dayKey(x))))x.done=dayKey(x);
   if(TP[x.id])TP[x.id].open=false;
   save();render()}
@@ -906,11 +903,6 @@ function openEd(c,k){
 setInterval(function(){
   var k=hm(nowMin());medSync();
   S.items.forEach(function(x){if(snoozed[x.id]&&!open(x))delete snoozed[x.id]});
-  S.items.filter(open).forEach(function(x){
-    if(NATIVE)return;
-    if(mm(x)&&!medVis(x))return;
-    if(snoozed[x.id]){if(Date.now()>=snoozed[x.id]){delete snoozed[x.id];notify(x,true)}return}
-    if((x.t||x.s)===k&&fired[x.id]!==k){fired[x.id]=k;notify(x,true)}});
   if(!Object.keys(TP).some(function(i){return TP[i].open})&&!$("ed").classList.contains("on")&&!Object.keys(VE).length)render();
 },20000);
 render();view();
