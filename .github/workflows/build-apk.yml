@@ -26,6 +26,28 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Earlier reminders disappear when the next one for the same item arrives
+        run: |
+          F=node_modules/@capacitor/local-notifications/android/src/main/java/com/capacitorjs/plugins/localnotifications/LocalNotificationManager.java
+          python3 - "$F" <<'PY'
+          import sys
+          p = sys.argv[1]
+          s = open(p).read()
+          a = "        createActionIntents(localNotification, mBuilder);\n"
+          b = ('        try {\n'
+               '            if (localNotification.getExtra() != null && localNotification.getExtra().has("timeoutMs")) {\n'
+               '                long tm = localNotification.getExtra().getLong("timeoutMs");\n'
+               '                if (tm > 0) mBuilder.setTimeoutAfter(tm);\n'
+               '            }\n'
+               '        } catch (Exception ignored) {}\n')
+          if a in s and "timeoutMs" not in s:
+              open(p, "w").write(s.replace(a, b + a, 1))
+              print("patched")
+          else:
+              print("patch not applied")
+          PY
+          grep -n "timeoutMs" "$F" || echo "WARNING: reminders will not replace each other"
+
       - name: Create Android project
         run: npx cap add android
 
