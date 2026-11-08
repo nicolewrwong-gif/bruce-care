@@ -1162,7 +1162,7 @@ function renderAll(){
 function printAll(){document.querySelectorAll("#allov details").forEach(function(d){d.open=true});window.print()}
 $("allclose").onclick=closeAll;$("allprint").onclick=printAll;
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&$("allov").classList.contains("on"))closeAll()});
-function render(){renderMain();renderWeight();renderVet();renderMeds();renderEmerg();nativeSync()}
+function render(){renderMain();renderWeight();renderVet();renderMeds();renderEmerg();nativeSync();widgetSync()}
 $("wd").value=iso(new Date());
 $("vd").value="";
 $("mdt").value=iso(new Date());
@@ -1347,6 +1347,36 @@ if(LN){try{
     .then(function(){return LN.checkExactNotificationSetting?LN.checkExactNotificationSetting().then(function(r){if(r&&r.exact_alarm&&r.exact_alarm!=="granted"&&LN.changeExactNotificationSetting)return LN.changeExactNotificationSetting()}):0})
     .then(function(){nsSig="";nativeSync()}).catch(function(){nsSig="";nativeSync()});
 }catch(e){}}
+
+/* ---- home screen widget bridge ---- */
+var BW=null,bwSig="";
+try{if(NATIVE)BW=(Capacitor.Plugins&&Capacitor.Plugins.BruceWidget)||Capacitor.registerPlugin("BruceWidget")}catch(e){}
+function widgetSync(){
+  if(!BW)return;
+  try{
+    var now=Date.now(),nd=new Date(),list=S.items.filter(open).map(function(x){
+      var due=0;
+      if(x.grp&&x.dyn&&x.ts>0)due=x.ts;
+      else if(!x.dom&&!x.rec&&x.t){var m=mins(x.t);due=new Date(nd.getFullYear(),nd.getMonth(),nd.getDate(),Math.floor(m/60),m%60).getTime()}
+      var o={id:x.id,n:x.n,s:sub(x),od:due>0?now>=due:false};
+      if(due>0){o.due=due;if(x.dose)o.dz=x.dose}
+      return{o:o,k:due||now}}).sort(function(a,b){return a.k-b.k}).slice(0,5).map(function(r){return r.o});
+    var sig=JSON.stringify(list);if(sig===bwSig)return;bwSig=sig;
+    BW.update({title:nm(),items:list}).catch(function(){bwSig=""})
+  }catch(e){}}
+function widgetDrain(){
+  if(!BW)return;
+  BW.drain().then(function(r){
+    var q=(r&&r.queue)||[],ch=false;
+    q.forEach(function(e){
+      var x=S.items.filter(function(i){return i.id===e.id})[0];
+      if(x&&open(x)){completeAt(x,Math.min(e.at||Date.now(),Date.now()));ch=true}});
+    bwSig="";widgetSync()
+  }).catch(function(){})}
+if(BW){
+  widgetDrain();
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)widgetDrain()});
+  setInterval(function(){if(!document.hidden)widgetSync()},60000)}
 
 var TP={};
 function isLate(e){
