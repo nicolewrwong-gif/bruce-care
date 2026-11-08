@@ -239,6 +239,7 @@ ol.aids .n{flex:0 0 34px;height:34px;border-radius:50%;background:var(--accent);
 .rgr[aria-expanded="true"]{font-weight:500}
 .dt{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;box-sizing:border-box}
 .dt.dg{background:var(--ink)}
+.dt.dl{border:1.5px solid var(--ink);background:linear-gradient(90deg,var(--ink) 50%,transparent 50%)}
 .dt.ds{border:1.5px solid var(--ink);background:transparent}
 .dt.dn{background:#dcdcdc}
 .rgd{padding:2px 0 10px;border-top:1px dashed var(--line)}
@@ -759,19 +760,19 @@ function renderMain(){
     var k=iso(new Date(t0.getFullYear(),t0.getMonth(),t0.getDate()-i)),list=by[k]||[];
     var res=cols.map(function(c){
       var es=list.filter(function(e){return e.type===c.ty&&(c.re?c.re.test(e.n):e.n===c.n)}),g=es.filter(function(e){return!e.skipped})[0];
-      return{c:c,g:g,sk:!g&&es.length>0}});
+      return{c:c,g:g,late:!!g&&isLate(g),sk:!g&&es.length>0}});
     var label=i===0?"Today":i===1?"Yesterday":sd(pd(k)),open1=!!RX[k];
     var row=el("div","rgr");row.setAttribute("role","button");row.setAttribute("tabindex","0");row.setAttribute("aria-expanded",open1?"true":"false");
-    row.setAttribute("aria-label",label+": "+res.map(function(r,j){return NM[j]+" "+(r.g?"given":r.sk?"skipped":"no entry")}).join(", "));
+    row.setAttribute("aria-label",label+": "+res.map(function(r,j){return NM[j]+" "+(r.g?(r.late?"given late":"given"):r.sk?"skipped":"no entry")}).join(", "));
     row.append(el("span","",label));
-    res.forEach(function(r){var c=el("span",""),d=el("i","dt "+(r.g?"dg":r.sk?"ds":"dn"));c.append(d);row.append(c)});
+    res.forEach(function(r){var c=el("span",""),d=el("i","dt "+(r.g?(r.late?"dl":"dg"):r.sk?"ds":"dn"));c.append(d);row.append(c)});
     function tg(){RX[k]=!RX[k];renderMain()}
     row.onclick=tg;row.onkeydown=function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();tg()}};
     card.append(row);
     if(open1){
       var dt=el("div","rgd");
       res.forEach(function(r,j){
-        var line=el("div","rgl"),nmx=el("span","",NM[j]),v=el("span","",r.g?ft(r.g.at):r.sk?"Skipped":"No entry");
+        var line=el("div","rgl"),nmx=el("span","",NM[j]),v=el("span","",r.g?ft(r.g.at)+(r.late?" (late)":""):r.sk?"Skipped":"No entry");
         if(!r.g)v.style.color="var(--sub)";
         var eb=el("button","quiet","Edit");eb.style.cssText="font-size:13px;padding:4px 8px;margin-left:4px";eb.setAttribute("aria-label","Edit "+NM[j]+" for "+label);
         eb.onclick=function(ev){ev.stopPropagation();openEd(r.c,k)};
@@ -787,7 +788,7 @@ function renderMain(){
   tgb.style.cssText="display:block;width:100%;text-align:left;font-size:15px;padding:14px 0 6px;border-top:1px solid var(--line);border-radius:0;color:var(--sub)";
   tgb.onclick=function(){RMORE=!RMORE;renderMain()};card.append(tgb);
   var lg=el("div","rglg");
-  [["dg","Given"],["ds","Skipped"],["dn","No entry"]].forEach(function(x){var sp=el("span",""),d=el("i","dt "+x[0]);d.style.marginRight="6px";sp.append(d,document.createTextNode(x[1]));lg.append(sp)});
+  [["dg","Given"],["dl","Given late"],["ds","Skipped"],["dn","No entry"]].forEach(function(x){var sp=el("span",""),d=el("i","dt "+x[0]);d.style.marginRight="6px";sp.append(d,document.createTextNode(x[1]));lg.append(sp)});
   card.append(lg);rc.append(card);
   var va=el("button","quiet","View all entries");va.type="button";va.style.cssText="display:block;margin:6px 0 0;padding:8px 0;font-size:13px;color:var(--sub);text-decoration:underline;text-underline-offset:3px";
   va.onclick=openAll;rc.append(va);
@@ -799,7 +800,7 @@ function renderMain(){
   [{n:"Worming chewable",x:wi},{n:"Pentosan injection",x:px}].forEach(function(r){
     var tr=el("tr",""),c=el("td",""),l=r.x?lastLog(r.x):null;
     tr.append(el("td","",r.n));
-    if(l)c.append(document.createTextNode(sd(new Date(l.at))),el("small","",ft(l.at)));
+    if(l)c.textContent=sd(new Date(l.at));
     else if(r.x&&r.x.seed)c.textContent=sd(pd(r.x.seed));
     else{c.textContent="Not recorded";c.style.color="var(--sub)"}
     tr.append(c,el("td","",!r.x?"–":open(r.x)?"Due now":nextDue(r.x)?sd(nextDue(r.x)):"Not scheduled"));
@@ -1332,6 +1333,12 @@ if(LN){try{
 }catch(e){}}
 
 var TP={};
+function isLate(e){
+  if(e.skipped||e.type!=="Meal")return false;
+  var it=S.items.filter(function(x){return x.type==="Meal"&&x.n===e.n})[0];if(!it)return false;
+  var d=new Date(e.at),m=d.getHours()*60+d.getMinutes(),en=mins(it.e),st=mins(it.s),
+    after=(m-en+1440)%1440,gap=(st-en+1440)%1440;
+  return after>0&&after<gap/2}
 function ekey(e){var d=new Date(e.at);if(/dinner|\(PM\)/i.test(e.n)&&d.getHours()<5)d=new Date(d.getTime()-864e5);return iso(d)}
 function srt(){S.log.sort(function(a,b){return b.at-a.at});S.log=S.log.slice(0,4000)}
 function completeAt(x,ts){
