@@ -1354,7 +1354,7 @@ try{if(NATIVE)BW=(Capacitor.Plugins&&Capacitor.Plugins.BruceWidget)||Capacitor.r
 function widgetSync(){
   if(!BW)return;
   try{
-    var now=Date.now(),nd=new Date(),list=S.items.filter(open).map(function(x){
+    var now=Date.now(),nd=new Date(),list=S.items.filter(function(x){return open(x)&&!x.rec&&!/pentosan/i.test(x.n||"")}).map(function(x){
       var due=0;
       if(x.grp&&x.dyn&&x.ts>0)due=x.ts;
       else if(!x.dom&&!x.rec&&x.t){var m=mins(x.t);due=new Date(nd.getFullYear(),nd.getMonth(),nd.getDate(),Math.floor(m/60),m%60).getTime()}
