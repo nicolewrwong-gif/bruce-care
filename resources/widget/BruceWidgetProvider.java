@@ -142,7 +142,7 @@ public class BruceWidgetProvider extends AppWidgetProvider {
             v.setTextViewText(NAME[i], o.optString("n", ""));
             v.setTextViewText(SUB[i], sub);
             v.setViewVisibility(SUB[i], sub.isEmpty() ? View.GONE : View.VISIBLE);
-            v.setTextColor(SUB[i], od ? Color.parseColor("#C0392B") : Color.parseColor("#6B6B6B"));
+            v.setTextColor(SUB[i], od ? Color.parseColor("#FF8F84") : Color.parseColor("#C4C4C9"));
 
             int id = o.optInt("id", -1);
             Intent d = new Intent(c, BruceWidgetProvider.class);
