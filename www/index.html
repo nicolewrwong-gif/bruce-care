@@ -501,6 +501,12 @@ function bdText(){
   return a}
 function qlog(q){qt=Date.now();ql={n:q.n,type:q.type,by:S.me,at:r15(qt)};S.log.unshift(ql);S.log=S.log.slice(0,4000);save();render()}
 function undoQ(){S.del[tk("l",lkey(ql))]=Date.now();S.log=S.log.filter(function(e){return e!==ql});ql=null;save();render()}
+function undoLast(x){
+  var l=lastLog(x);if(!l)return;
+  S.del[tk("l",lkey(l))]=Date.now();
+  S.log=S.log.filter(function(e){return e!==l});
+  var p=lastLog(x);x.done=p?ymd(new Date(p.at)):"";x.booked=0;
+  save();render()}
 function medSync(){
   var G={};
   S.items.forEach(function(x){if(x.grp)(G[x.grp]=G[x.grp]||[]).push(x)});
@@ -732,6 +738,14 @@ function renderMain(){
       g.style.cssText="display:flex;align-items:center;gap:12px";
       var dn=el("button","primary","Done");dn.style.cssText="padding:7px 16px;font-size:13px;min-height:0;flex:0 0 auto";
       dn.setAttribute("aria-label","Mark "+x.n+" done");dn.onclick=function(){complete(x)};g.append(dn);
+    }else{
+      var ulg=lastLog(x);
+      if(ulg&&Date.now()-ulg.at<172800000){
+        g.style.cssText="display:flex;align-items:center;gap:8px";
+        var un=el("button","quiet","Undo");un.style.cssText="font-size:13px;padding:4px 8px;color:var(--ink);text-decoration:underline";
+        un.setAttribute("aria-label","Undo "+x.n+" marked done "+sd(new Date(ulg.at)));
+        un.onclick=function(){undoLast(x)};g.append(un);
+      }
     }
     row.append(a,g);mc.append(row);
   });
@@ -1204,7 +1218,9 @@ function merge(r){
   function un(a,b,p){var m={},o=[];arr(a).concat(b).forEach(function(e){if(del[tk(p,e.id)])return;var i=m[e.id];if(i===undefined){m[e.id]=o.length;o.push(e)}else if((e.u||0)>(o[i].u||0))o[i]=e});return o.sort(function(x,y){return x.id-y.id})}
   S.weights=un(r.weights,S.weights,"w");S.vet=un(r.vet,S.vet,"v");S.meds=un(r.meds,S.meds,"m");S.del=del;
   var rd=r.done||{};
-  S.items.forEach(function(x){var d=rd["i"+x.id];if(d&&(!x.done||pd(d)-pd(x.done)>0))x.done=d})}
+  S.items.forEach(function(x){
+    if(x.rec||x.dom){var l=lastLog(x);x.done=l?ymd(new Date(l.at)):"";return}
+    var d=rd["i"+x.id];if(d&&(!x.done||pd(d)-pd(x.done)>0))x.done=d})}
 function setSy(m){$("sysum").textContent=m;$("syedit").textContent=SY?"Edit":"Set up"}
 function syLabel(){return!SY?"Off — this device only":"Synced "+(Date.now()-syOk<60000?"just now":Math.round((Date.now()-syOk)/60000)+" min ago")}
 function sync(){
