@@ -15,7 +15,7 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-main{max-width:440px;margin:0 auto;padding:40px 24px 120px}
+main{max-width:440px;margin:0 auto;padding:40px 24px 64px}
 h1,h2,.big{font-family:Inter,system-ui,sans-serif;font-weight:600;letter-spacing:-.03em;margin:0}
 h1{font-size:28px;line-height:1.1;margin-bottom:28px}
 h2{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);margin:36px 0 8px}
@@ -23,6 +23,9 @@ input,select,button{font:inherit;color:inherit}
 input,select{width:100%;min-width:0;background:var(--sun);border:1px solid transparent;border-radius:12px;padding:12px 14px}
 input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px}
+nav{display:flex;gap:24px;margin-bottom:32px;border-bottom:1px solid var(--line)}
+nav a{padding:0 0 10px;margin-bottom:-1px;border-bottom:2px solid transparent;color:var(--sub);text-decoration:none;font-weight:500}
+nav a.on{color:var(--ink);border-bottom-color:var(--ink)}
 #today{display:flex;flex-direction:column}
 .next{background:var(--sun);color:var(--sun-ink);border-radius:24px;padding:28px 24px}
 .next small{font-size:13px;color:var(--sub);display:block}
@@ -133,36 +136,6 @@ h2.sh{font-size:20px;font-weight:600;letter-spacing:-.03em;text-transform:none;c
 .r .g{display:flex;align-items:center;gap:4px}
 #health ul{gap:0}
 #health .r{margin:0}
-
-/* bottom tab bar */
-#tabs{position:fixed;left:0;right:0;bottom:0;z-index:4;display:flex;background:var(--bg);border-top:1px solid var(--line);padding:10px 8px calc(10px + env(safe-area-inset-bottom,0px))}
-#tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;color:var(--sub);text-decoration:none;font-size:12.5px;font-weight:500;-webkit-tap-highlight-color:transparent}
-#tabs a.on{color:var(--ink)}
-#tabs svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-/* health page */
-#health h1{font-size:34px;margin-bottom:28px}
-.sech{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:48px 0 0}
-.sech.first{margin-top:0}
-.sech.ln{border-bottom:1px solid var(--line);padding-bottom:14px}
-.sech h2.sh{margin:0;font-size:24px}
-button.pill{padding:12px 22px;font-size:15px;font-weight:500;flex:0 0 auto}
-button.quiet.more{display:block;font-size:16px;padding:18px 0 4px}
-#health .r{font-size:16px;padding:16px 0}
-#health .r small{font-size:14px}
-#health .sum{margin:20px 0 0}
-#health .sum .big{font-size:48px}
-#health #wchart{border-radius:28px;padding:18px 24px 20px}
-#wlist .g{color:var(--ink);font-size:16px;gap:14px}
-#wlist .g button.quiet{font-size:16px;color:var(--sub)}
-.r.mr{align-items:flex-start;cursor:pointer}
-.r.mr .g{align-self:flex-start;font-size:14px;font-weight:400;color:var(--sub)}
-.r.vr{cursor:pointer}
-.acts{flex:0 0 100%;display:flex;gap:4px;margin-top:6px}
-.acts button{padding:6px 14px;font-size:14px}
-.hist{padding:0 0 10px 0}
-.hist .r{padding:10px 0;font-size:15px;border-bottom-color:var(--line)}
-.hist .r:last-child{border-bottom:none}
-.hist .r.past b{color:var(--sub);font-weight:400}
 </style>
 </head>
 <body>
@@ -209,6 +182,7 @@ button.quiet.more{display:block;font-size:16px;padding:18px 0 4px}
 <main>
   <div id="head"><div id="avatar" role="img" aria-label="Photo of Bruce">🐾</div><div><h1 id="title">Dog care</h1><p id="bday" class="empty"></p></div></div>
   
+  <nav><a href="#today" id="tab1">Today</a><a href="#record" id="tab2">Record</a><a href="#health" id="tab3">Health</a></nav>
 
   <div id="today">
     <section class="next" id="next" aria-live="polite"></section>
@@ -222,30 +196,26 @@ button.quiet.more{display:block;font-size:16px;padding:18px 0 4px}
   <div id="rec"></div>
 
   <div id="health">
-    <h1>Health</h1>
-
-    <div class="sech first ln"><h2 class="sh">Vet visits</h2><button class="pill" id="vopen">+ Add</button></div>
+    <h2 class="sh" style="margin-top:0;margin-bottom:0">Vet visits</h2>
+    <h2>Upcoming</h2>
     <ul id="vup"></ul>
-    <button class="quiet more" id="vmore">Show earlier</button>
+    <h2>Past</h2>
     <ul id="vpast"></ul>
+    <button class="quiet" id="vopen" style="padding-left:0;margin-top:8px">+ Add appointment</button>
 
-    <div class="sech"><h2 class="sh">Weight</h2><button class="pill" id="wopen">+ Log</button></div>
+    <h2 class="sh">Weight</h2>
     <div id="wsum"></div>
     <div id="wchart"></div>
     <ul id="wlist"></ul>
-    <button class="quiet more" id="wmore">Show earlier</button>
+    <button class="quiet" id="wopen" style="padding-left:0;margin-top:8px">+ Log weight</button>
 
-    <div class="sech ln"><h2 class="sh">Medication changes</h2><button class="pill" id="mopen">+ Log</button></div>
+    <h2 class="sh">Medication changes</h2>
     <div id="mlist"></div>
+    <button class="quiet" id="mopen" style="padding-left:0">+ Log a medication change</button>
   </div>
 
   <div id="foot"><span>Sync across devices · <span id="sysum"></span></span><button class="quiet" id="syedit">Set up</button></div>
 </main>
-<nav id="tabs" aria-label="Main">
-  <a href="#today" id="tab1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>Today</a>
-  <a href="#record" id="tab2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h10M5 17h14"/></svg>Record</a>
-  <a href="#health" id="tab3"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/></svg>Health</a>
-</nav>
 <script>
 var S={me:"",items:[
 {id:1,n:"Breakfast",type:"Meal",s:"05:00",e:"14:00"},
@@ -425,8 +395,7 @@ function view(){
   var ids={today:"today",record:"rec",health:"health"},tabs={today:"tab1",record:"tab2",health:"tab3"};
   if(tab==="weight"||tab==="vet")tab="health";
   if(!ids[tab])tab="today";
-  for(var k in ids){$(ids[k]).style.display=k===tab?"":"none";$(tabs[k]).className=k===tab?"on":"";if(k===tab)$(tabs[k]).setAttribute("aria-current","page");else $(tabs[k]).removeAttribute("aria-current")}
-  $("head").style.display=tab==="health"?"none":"";
+  for(var k in ids){$(ids[k]).style.display=k===tab?"":"none";$(tabs[k]).className=k===tab?"on":""}
 }
 ['tab1','tab2','tab3'].forEach(function(id,i){
   var a=$(id);a.setAttribute("role","button");a.setAttribute("href","#");
@@ -434,6 +403,17 @@ function view(){
 });
 window.onhashchange=function(){tab=(location.hash||"").slice(1);view()};
 
+var WD=null,WG=null,wgSig="";
+function widgetPush(){
+  if(!WG||!WD)return;
+  var sig=JSON.stringify(WD);if(sig===wgSig)return;wgSig=sig;
+  try{WG.update(WD).catch(function(){wgSig=""})}catch(e){wgSig=""}}
+function widgetDrain(){
+  if(!WG)return;
+  try{WG.drain().then(function(r){
+    var q=(r&&r.queue)||[];if(!q.length)return;
+    q.forEach(function(e){var x=S.items.filter(function(i){return i.id===e.id})[0];if(x&&open(x))completeAt(x,Math.min(e.at,Date.now()))});
+    wgSig="";render()}).catch(function(){})}catch(e){}}
 function renderMain(){
   medSync();
   autoSkip();
@@ -451,41 +431,16 @@ function renderMain(){
   var qm=$("qmsg");qm.textContent="";
   if(ql&&S.log.indexOf(ql)>=0&&Date.now()-qt<600000){qm.append(document.createTextNode("Logged "+ql.n+" "));var uq=el("button","quiet","Undo");uq.onclick=undoQ;qm.append(uq)}
   
-  var nextBest=null,nextShown=[];
-  function mealNote(){
-    var e=null;S.log.forEach(function(l){if(l.type==="Meal"&&l.at<=Date.now()+6e4&&Date.now()-l.at<64800000&&(!e||l.at>e.at))e=l});
-    if(!e)return null;
-    var d=document.createElement("div");d.style.cssText="display:flex;align-items:center;gap:6px;margin:8px 0 18px;font-size:13px;color:var(--sub)";
-    d.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-    d.append(document.createTextNode(e.n+(e.skipped?" skipped":" given")+" · "+(ymd(new Date(e.at))===ymd(new Date())?"":"yesterday ")+ft(e.at)));
-    return d}
+  var nextBest=null;
   var nx=$("next");nx.textContent="";
   var nu=todo.filter(function(x){
-    if(x.type!=="Meal")return false;
     if(/heartworm/i.test(x.n))return false;
     if(mm(x)&&x.dyn&&!medShow(x))return false;
     if(mm(x)&&!x.dyn&&medShow(x)&&!medVis(x))return false;
     return true});
-  var dueMeal=nu.filter(shown).length>0,dm=todo.filter(function(x){return mm(x)&&shown(x)});
-  if(!dueMeal&&dm.length){
-    nx.append(el("small","","Next up for "+nm()));
-    var mn1=mealNote();if(mn1)nx.append(mn1);else nx.lastChild.style.marginBottom="10px";
-    dm.forEach(function(m,i){
-      nextShown.push(m);
-      var blk=el("div","");if(i)blk.style.marginTop="16px";
-      var bg=bigEl(m);bg.style.cssText="font-size:17px;margin:0 0 2px";blk.append(bg);
-      var bp=[];if(m.dose)bp.push(m.dose);var lm1=lateMin(m);if(lm1)bp.push("Overdue "+dur(lm1));
-      if(bp.length)blk.append(el("small","",bp.join(" · ")));
-      var mb=el("div","row");mb.style.marginTop="10px";
-      var md=el("button","primary","Done"),ms=el("button","quiet","Skip");
-      md.style.flex=ms.style.flex="0 0 auto";md.style.cssText+=";padding:8px 18px;font-size:14px;min-height:0";ms.style.fontSize="14px";
-      md.setAttribute("aria-label","Mark "+m.n+" done");ms.setAttribute("aria-label","Skip "+m.n+" today");
-      md.onclick=function(){complete(m)};ms.onclick=function(){skip(m)};
-      var mtp=timePanel(m),mcb=clockBtn(m,mtp);mcb.className="quiet";mcb.style.flex="0 0 auto";mb.append(md,ms,mcb);blk.append(mb,mtp);nx.append(blk);
-    });
-  }else if(nu.length){
+  if(nu.length){
     var best=nu[0],d=until(best);
-    nextBest=shown(best)?best:null;if(nextBest)nextShown.push(nextBest);
+    nextBest=shown(best)?best:null;
     nx.append(el("small","","Next up for "+nm()),bigEl(best));
     var bp=[];if(best.dose)bp.push(best.dose);
     if(mm(best)){
@@ -502,11 +457,14 @@ function renderMain(){
       var ntp=timePanel(best),ncb=clockBtn(best,ntp);ncb.className="quiet";ncb.style.flex="0 0 auto";nb.append(nd,ns,ncb);nx.append(nb,ntp);
     }
   }else{
-    nx.append(el("small","","Today for "+nm()),el("div","big","All done"),el("small","","No more meals until tomorrow."));var mn2=mealNote();if(mn2){mn2.style.marginBottom="0";nx.append(mn2)}
+    nx.append(el("small","","Today for "+nm()),el("div","big","All done"),el("small","","Nothing left until tomorrow."));
   }
 
   var ul=$("list");ul.textContent="";
   var hot=todo.filter(shown);
+  WD={title:nm(),items:hot.filter(function(x){return!x.rec}).slice(0,5).map(function(x){
+    var m=x.type==="Meal",lm=lateMin(x),s=m?win(x):[x.dose,x.dom?"monthly":"",lm?"Overdue "+dur(lm):""].filter(Boolean).join(" · ");
+    return{id:x.id,n:x.n,s:s,dz:x.dose||"",due:x.dyn&&x.ts>0?x.ts:0,od:lm>0,cx:!medBundle(x)}})};
   var vt=S.vet.filter(function(v){return v.d===iso(new Date())}).sort(function(a,b){return a.tm<b.tm?-1:1});
   if(!todo.length&&!vt.length)ul.append(el("li","empty","Everything is done. Check the Record tab."));
   else if(!hot.length&&!vt.length)ul.append(el("li","empty","Nothing due right now."));
@@ -517,7 +475,7 @@ function renderMain(){
   });
   function mealOf(x){return mins(x.t)<720?/breakfast/i:/dinner/i}
   function add(x,cls){
-    if(nextShown.indexOf(x)>=0)return;
+    if(x===nextBest)return;
     var li=el("li",cls+(x.grp&&lateMin(x)?" late":"")),t=el("div","t");t.append(el("b","",x.n),el("span","",sub(x)));
     var ok=el("button","primary","Done");ok.setAttribute("aria-label","Mark "+x.n+" done");
     ok.onclick=function(){complete(x)};
@@ -596,13 +554,23 @@ function renderMain(){
   });
   var tc2=el("div","card");tc2.style.padding="6px 14px";tc2.append(t2);rc.append(tc2);
 
+  var oth=S.log.filter(function(e){return isOther(e)&&!isSp(e)}).slice(0,30);
+  if(oth.length)rc.append(sec("Other"));
+  var last="";
+  oth.forEach(function(e){
+    var day=dh(e.at);
+    if(day!==last){rc.append(el("h2","",day));last=day}
+    var row=el("div","r"),a=el("div",""),qq=QL.filter(function(q){return q.n===e.n})[0];
+    a.append(ic(qq?qq.ik:e.type),document.createTextNode(" "+e.n.replace(/ \(diarrhoea\)$/,"")));
+    if(e.by!=="auto")a.append(el("small","",(e.skipped?"skipped by ":"by ")+(e.by||"someone")));
+    row.append(a,el("span","g",e.skipped?"Skipped":ft(e.at)));
+    rc.append(row);
+  });
 }
 
 function iso(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
 function pd(t){var p=t.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
 function fd(t){return pd(t).toLocaleDateString([],{weekday:"short",day:"numeric",month:"short",year:"numeric"})}
-function sdy(t){var d=pd(t);return sd(d)+(d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"")}
-var showW=false,showV=false,VX={},MX={};
 function renderWeight(){
   var w=S.weights.slice().sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:b.id-a.id});
   var sm=$("wsum");sm.textContent="";
@@ -612,54 +580,42 @@ function renderWeight(){
     sm.append(d);
   }
   var ch=$("wchart");ch.textContent="";
-  var pts=w.slice(0,12).reverse(),mn=0,mx=0;
+  var pts=w.slice(0,12).reverse();
   if(pts.length>1){
-    mn=Math.min.apply(null,pts.map(function(p){return p.v}));mx=Math.max.apply(null,pts.map(function(p){return p.v}));
-    var rg=mx-mn||1,c=[];
-    pts.forEach(function(p,i){c.push([(i/(pts.length-1)*286+7).toFixed(1),(mx===mn?50:90-(p.v-mn)/rg*80).toFixed(1)])});
-    var lp=c[c.length-1];
-    ch.innerHTML='<svg viewBox="0 0 300 100" role="img" aria-label="Weight over time"><polyline points="'+c.map(function(q){return q.join(",")}).join(" ")+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+lp[0]+'" cy="'+lp[1]+'" r="5" fill="currentColor"/></svg>';
-    ch.append(el("p","empty",sd(pd(pts[0].d))+" – "+sd(pd(pts[pts.length-1].d))+" · "+mn.toFixed(1)+"–"+mx.toFixed(1)+" kg"));
-  }else ch.append(el("p","empty",w.length?"Add one more weight to see the chart.":"Add weights to see the chart."));
+    var mn=Math.min.apply(null,pts.map(function(p){return p.v})),mx=Math.max.apply(null,pts.map(function(p){return p.v})),rg=mx-mn||1,c=[];
+    pts.forEach(function(p,i){c.push([(i/(pts.length-1)*296+2).toFixed(1),(mx===mn?50:92-(p.v-mn)/rg*84).toFixed(1)])});
+    ch.innerHTML='<svg viewBox="0 0 300 100" role="img" aria-label="Weight over time"><polyline points="'+c.map(function(q){return q.join(",")}).join(" ")+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+c.map(function(q,i){return'<circle cx="'+q[0]+'" cy="'+q[1]+'" r="'+(i===c.length-1?4:2.5)+'" fill="currentColor"/>'}).join("")+'</svg>';
+  }
+  if(pts.length>1)ch.append(el("p","empty",sd(pd(pts[0].d))+" – "+sd(pd(pts[pts.length-1].d))+" · "+mn.toFixed(1)+"–"+mx.toFixed(1)+" kg"));
+  else ch.append(el("p","empty",w.length?"Add one more weight to see the chart.":"Add weights to see the chart."));
   var ul=$("wlist");ul.textContent="";
-  if(!w.length)ul.append(el("li","empty","No weights yet. Tap + Log to add one."));
-  var vis=showW?w:w.slice(0,1);
-  vis.forEach(function(e,i){
-    var row=el("li","r"),a=el("div","");a.append(document.createTextNode(sdy(e.d)));
+  if(!w.length)ul.append(el("li","empty","No weights yet. Add one above."));
+  w.forEach(function(e,i){
+    var row=el("li","r"),a=el("div","");a.append(document.createTextNode(fd(e.d)));
     if(w[i+1]){var df=Math.round((e.v-w[i+1].v)*10)/10;a.append(el("small","",(df>0?"+":"")+df.toFixed(1)+" kg"))}
     var g=el("span","g");g.append(document.createTextNode(e.v.toFixed(1)+" kg"));
     var x=el("button","quiet","Remove");x.setAttribute("aria-label","Remove weight from "+fd(e.d));
     x.onclick=function(){S.del[tk("w",e.id)]=Date.now();S.weights=S.weights.filter(function(y){return y.id!==e.id});save();render()};
     g.append(x);row.append(a,g);ul.append(row);
   });
-  var mb=$("wmore");mb.style.display=w.length>1?"":"none";
-  mb.textContent=showW?"Hide earlier":"Show earlier ("+(w.length-1)+")";
 }
-$("wmore").onclick=function(){showW=!showW;renderWeight()};
 function renderVet(){
   var now=iso(new Date())+" "+hm(nowMin());
   var all=S.vet.slice(),up=all.filter(function(v){return v.d+" "+v.tm>=now}).sort(function(a,b){return(a.d+a.tm)<(b.d+b.tm)?-1:1});
   var past=all.filter(function(v){return v.d+" "+v.tm<now}).sort(function(a,b){return(a.d+a.tm)<(b.d+b.tm)?1:-1});
   function fill(ul,list,emptyMsg){
     ul.textContent="";
-    if(!list.length){if(emptyMsg)ul.append(el("li","empty",emptyMsg));return}
+    if(!list.length)ul.append(el("li","empty",emptyMsg));
     list.forEach(function(v){
-      var row=el("li","r wr vr"),a=el("div","");a.style.cssText="flex:1 1 0;min-width:0";
-      a.append(document.createTextNode(v.t),el("small","",sdy(v.d)+" · "+f(v.tm)));
+      var row=el("li","r wr"),a=el("div","");a.style.cssText="flex:1 1 0;min-width:0";
+      a.append(document.createTextNode(v.t),el("small","",fd(v.d)+" · "+f(v.tm)));
       if(v.n)a.append(el("p","vn",v.n));
-      function tg(){if(VE[v.id])return;VX[v.id]=!VX[v.id];renderVet()}
-      row.setAttribute("role","button");row.setAttribute("tabindex","0");row.setAttribute("aria-expanded",VX[v.id]?"true":"false");
-      row.onclick=function(ev){if(ev.target.closest&&ev.target.closest("button,textarea"))return;tg()};
-      row.onkeydown=function(ev){if(ev.target===row&&(ev.key==="Enter"||ev.key===" ")){ev.preventDefault();tg()}};
-      row.append(a);
-      if(VX[v.id]&&!VE[v.id]){
-        var ac=el("div","acts");
-        var nb=el("button","quiet",v.n?"Edit note":"Add note");nb.setAttribute("aria-label",(v.n?"Edit":"Add")+" note for "+v.t);
-        nb.onclick=function(){VE[v.id]={text:v.n||""};renderVet()};
-        var x=el("button","quiet","Remove");x.setAttribute("aria-label","Remove appointment "+v.t);
-        x.onclick=function(){delete VE[v.id];delete VX[v.id];S.del[tk("v",v.id)]=Date.now();S.vet=S.vet.filter(function(y){return y.id!==v.id});save();render()};
-        ac.append(nb,x);row.append(ac);
-      }
+      var bt=el("div","");bt.style.cssText="display:flex;align-items:center;gap:2px;flex:0 0 auto";
+      var nb=el("button","quiet",v.n?"Edit note":"Add note");nb.setAttribute("aria-label",(v.n?"Edit":"Add")+" note for "+v.t);
+      nb.onclick=function(){VE[v.id]={text:v.n||""};renderVet()};
+      var x=el("button","quiet","Remove");x.setAttribute("aria-label","Remove appointment "+v.t);
+      x.onclick=function(){delete VE[v.id];S.del[tk("v",v.id)]=Date.now();S.vet=S.vet.filter(function(y){return y.id!==v.id});save();render()};
+      bt.append(nb,x);row.append(a,bt);
       if(VE[v.id]){
         var ew=el("div","");ew.style.cssText="flex:0 0 100%;margin-top:10px";
         var ta=el("textarea");ta.value=VE[v.id].text;ta.setAttribute("aria-label","Notes for "+v.t);ta.placeholder="Diagnosis, advice, results, follow-up…";
@@ -674,13 +630,10 @@ function renderVet(){
     });
   }
   fill($("vup"),up,"No upcoming appointments.");
-  fill($("vpast"),showV?past:[],"");
-  var mb=$("vmore");mb.style.display=past.length?"":"none";
-  mb.textContent=showV?"Hide earlier":"Show earlier ("+past.length+")";
+  fill($("vpast"),past,"No past appointments.");
   var vn=$("vetnext");vn.textContent="";
   if(up.length||past.length){var vr=el("div","r"),va=el("div","");va.append(document.createTextNode("Vet visit"),el("small","","Last: "+(past.length?fd(past[0].d):"none recorded")));vr.append(va,el("span","g",up.length?"Next "+sd(pd(up[0].d))+", "+f(up[0].tm):"None booked"));vn.append(vr)}
 }
-$("vmore").onclick=function(){showV=!showV;renderVet()};
 function medName(x){return x.grp||x.n}
 function medNames(){
   var o=[],seen={};
@@ -694,53 +647,35 @@ function applyMeds(){
     if(x.type!=="Medication")return;
     var es=medEnts(medName(x)).filter(function(e){return!e.d||e.d<=td}),l=es[es.length-1];
     if(l&&l.dose)x.dose=l.dose})}
-function cmpDose(a,b){
-  var p=/^([\d.]+)\s*(.*)$/,x=p.exec(a),y=p.exec(b);
-  if(x&&y&&x[2]===y[2])return x[1]+" → "+y[1]+(x[2]?" "+x[2]:"");
-  return a+" → "+b}
-function sdm(t){return pd(t).toLocaleDateString([],{day:"numeric",month:"short"})}
 function renderMeds(){
   var box=$("mlist"),dl=$("mdl"),td=iso(new Date()),ns=medNames();
   box.textContent="";dl.textContent="";
   ns.forEach(function(m){var o=el("option");o.value=m.n;dl.append(o)});
   ns=ns.filter(function(m){return medEnts(m.n).length});
-  if(!ns.length){var em=el("p","empty","No medication changes yet.");em.style.marginTop="16px";box.append(em);return}
-  var rows=ns.map(function(m){var es=medEnts(m.n);return{m:m,es:es,hd:es[es.length-1],pv:es[es.length-2]}});
-  rows.sort(function(a,b){return(b.hd.d||"")<(a.hd.d||"")?-1:(b.hd.d||"")>(a.hd.d||"")?1:0});
-  rows.forEach(function(o){
-    var m=o.m,es=o.es,hd=o.hd,pv=o.pv,wrap=el("div","");
-    var row=el("div","r mr"),a=el("div","");
-    a.append(document.createTextNode(m.n),el("small","",pv?cmpDose(pv.dose,hd.dose):hd.dose));
-    var g=el("span","g",hd.d?(hd.d>td?"Starts ":"From ")+sdm(hd.d):"");
-    row.append(a,g);
-    function tg(){MX[m.n]=!MX[m.n];renderMeds()}
-    row.setAttribute("role","button");row.setAttribute("tabindex","0");row.setAttribute("aria-expanded",MX[m.n]?"true":"false");
-    row.onclick=tg;row.onkeydown=function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();tg()}};
-    wrap.append(row);
-    if(MX[m.n]){
-      var cur=null;es.forEach(function(e){if(!e.d||e.d<=td)cur=e});
-      var h=el("div","hist");
-      if(!m.sch){var nr=el("p","empty","No reminders set for this medication.");nr.style.cssText="margin:0 0 4px;font-size:13px";h.append(nr)}
-      for(var i=es.length-1;i>=0;i--){(function(e,nx,i){
-        var future=e.d&&e.d>td,isCur=e===cur,r=el("div","r"+(isCur||future?"":" past")),a2=el("div","");
-        a2.append(el("b","",e.dose));
-        var p=[];
-        if(e.base)p.push("Original dose");else p.push((future?"Starts ":!m.sch&&i===0?"Started ":"From ")+fd(e.d));
-        if(nx)p.push("until "+fd(nx.d));
-        if(e.note)p.push(e.note);
-        a2.append(el("small","",p.join(" · ")));
-        var g2=el("span","g");g2.style.cssText="font-size:13px;color:var(--sub);font-weight:400";g2.append(document.createTextNode(isCur?"Current":future?"Planned":"Past"));
-        if(!e.base){
-          var x=el("button","quiet","Remove");x.setAttribute("aria-label","Remove "+m.n+" "+e.dose+" entry");
-          x.onclick=function(){S.del[tk("m",e.id)]=Date.now();S.meds=S.meds.filter(function(y){return y.id!==e.id});save();render()};
-          g2.append(x)}
-        r.append(a2,g2);h.append(r)})(es[i],es[i+1],i)}
-      wrap.append(h);
-    }
-    box.append(wrap);
-  });
-}
-function render(){renderMain();renderWeight();renderVet();renderMeds();nativeSync()}
+  if(!ns.length){box.append(el("p","empty","No medication changes yet."));return}
+  ns.forEach(function(m){
+    var es=medEnts(m.n),card=el("div","card mcard"),hd=el("div","mh"),cur=null;
+    es.forEach(function(e){if(!e.d||e.d<=td)cur=e});
+    var its=S.items.filter(function(x){return x.type==="Medication"&&medName(x).toLowerCase()===m.n.toLowerCase()});
+    var cd=cur?cur.dose:its[0]&&its[0].dose||"";
+    hd.append(el("b","",m.n),el("span","",(cd?"Now: "+cd:"")+(m.sch?"":(cd?" · ":"")+"No reminders")));
+    card.append(hd);
+    for(var i=es.length-1;i>=0;i--){(function(e,nx,i){
+      var future=e.d&&e.d>td,isCur=e===cur,row=el("div","r"+(isCur||future?"":" past")),a=el("div","");
+      a.append(el("b","",e.dose));
+      var p=[];
+      if(e.base)p.push("Original dose");else p.push((future?"Starts ":!m.sch&&i===0?"Started ":"From ")+fd(e.d));
+      if(nx)p.push("until "+fd(nx.d));
+      if(e.note)p.push(e.note);
+      a.append(el("small","",p.join(" · ")));
+      var g=el("span","g");g.append(document.createTextNode(isCur?"Current":future?"Planned":"Past"));
+      if(!e.base){
+        var x=el("button","quiet","Remove");x.setAttribute("aria-label","Remove "+m.n+" "+e.dose+" entry");
+        x.onclick=function(){S.del[tk("m",e.id)]=Date.now();S.meds=S.meds.filter(function(y){return y.id!==e.id});save();render()};
+        g.append(x)}
+      row.append(a,g);card.append(row)})(es[i],es[i+1],i)}
+    box.append(card)})}
+function render(){renderMain();renderWeight();renderVet();renderMeds();nativeSync();widgetPush()}
 $("wd").value=iso(new Date());
 $("vd").value="";
 $("mdt").value=iso(new Date());
@@ -831,6 +766,7 @@ if("serviceWorker" in navigator&&/^https?:/.test(location.protocol)&&!(window.Ca
 var LN=null,NATIVE=false,nsSig="",nsBusy=false,CH="reminders";
 try{NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
   if(NATIVE)LN=(Capacitor.Plugins&&Capacitor.Plugins.LocalNotifications)||Capacitor.registerPlugin("LocalNotifications")}catch(e){}
+try{if(NATIVE)WG=Capacitor.registerPlugin("BruceWidget")}catch(e){}
 function plan(){
   var out=[],now=Date.now(),nd=new Date(),H=36e5,cnt={};
   function at(off,t){var m=mins(t);return new Date(nd.getFullYear(),nd.getMonth(),nd.getDate()+off,Math.floor(m/60),m%60).getTime()}
@@ -840,27 +776,24 @@ function plan(){
   S.items.forEach(function(x){
     var od=(x.dose?" · "+x.dose:"");
     if(x.dom||x.rec){
-      if(x.rec&&x.booked)return;var due=x.rec?recDue(x):nextDue(x);if(!due)return;
+      if(x.rec)return;var due=x.rec?recDue(x):nextDue(x);if(!due)return;
       var T=new Date(due.getFullYear(),due.getMonth(),due.getDate(),Math.floor(mins(x.t)/60),mins(x.t)%60).getTime();
       if(T>now)add(x,T,msg(x));
       else if(open(x)){var n1=nxt(x.t);add(x,n1,msg(x));add(x,n1+864e5,msg(x))}
     }else if(x.type==="Meal"){
-      [0,1,2].forEach(function(d){if(d===0&&!open(x))return;add(x,at(d,x.s),msg(x),true,at(d,x.e)+(mins(x.e)<=mins(x.s)?864e5:0))});
+      return;
     }else if(x.grp){
       if(x.dyn){
         if(!(x.ts>0))return;
-        [x.ts,x.ts+2*H,x.ts+3*H].forEach(function(w,i){if(i)add(x,w,x.dose||"Time to give",true,0,x.n+", "+lateLbl(i===1?120:180));else add(x,w-4*H,msg(x))});
+        [H/2,2*H,3*H].forEach(function(o){add(x,x.ts+o,x.dose||"Time to give",true,0,x.n+", "+lateLbl(o/6e4))});
         if(open(x)&&x.ts+3*H<=now)add(x,Math.ceil(now/H)*H,x.dose||"Time to give",true,0,x.n+", "+lateLbl((Math.ceil(now/H)*H-x.ts)/6e4));
       }else{
         var bd=medBundle(x);
         if(bd){
           if(bd.items[0]!==x)return;
-          [0,1,2].forEach(function(d){var lst=d===0?bd.items.filter(open):bd.items;if(lst.length)add(x,at(d,x.s),bundleBody(lst),true,0,bd.title,1)});
-          var op=bd.items.filter(open);
-          if(op.length)add(x,at(0,x.e),bundleBody(op),true,0,bd.title+", "+lateLbl(((mins(x.e)-mins(x.t))+1440)%1440),1);
+          [0,1,2].forEach(function(d){var lst=d===0?bd.items.filter(open):bd.items;if(lst.length)add(x,at(d,x.e),bundleBody(lst),true,0,bd.title+", "+lateLbl(((mins(x.e)-mins(x.t))+1440)%1440),1)});
         }else{
-          [0,1,2].forEach(function(d){if(d===0&&!open(x))return;add(x,at(d,x.s),msg(x))});
-          if(open(x))add(x,at(0,x.e),x.dose||"Time to give",true,0,x.n+", "+lateLbl(((mins(x.e)-mins(x.t))+1440)%1440));
+          [0,1,2].forEach(function(d){if(d===0&&!open(x))return;add(x,at(d,x.e),x.dose||"Time to give",true,0,x.n+", "+lateLbl(((mins(x.e)-mins(x.t))+1440)%1440))});
         }
       }
     }
@@ -892,7 +825,7 @@ function nativeSync(){
   LN.getPending().then(function(r){
     var ids=(r.notifications||[]).filter(function(n){
       var i=+n.id;if(i<1000||i>=2000)return true;
-      var x=itemOfId(i);return!x||!openN(x)}).map(function(n){return{id:n.id}});
+      var x=itemOfId(i);return!x||x.rec||!openN(x)}).map(function(n){return{id:n.id}});
     return ids.length?LN.cancel({notifications:ids}):0})
   .then(function(){
     var list=pl.map(function(p){return{id:p.nid,title:p.title,body:p.body,channelId:CH,smallIcon:"ic_stat_paw",
@@ -901,7 +834,7 @@ function nativeSync(){
     return list.length?LN.schedule({notifications:list}):0})
   .then(function(){
     return LN.getDeliveredNotifications().then(function(r){
-      var rm=(r.notifications||[]).filter(function(n){var x=itemOfId(+n.id);return x===false||(x&&!openN(x))}).map(function(n){return{id:n.id}});
+      var rm=(r.notifications||[]).filter(function(n){var x=itemOfId(+n.id);return x===false||(x&&(x.rec||x.type==="Meal"||!openN(x)))}).map(function(n){return{id:n.id}});
       return rm.length?LN.removeDeliveredNotifications({notifications:rm}):0})})
   .then(function(){nsSig=sig}).catch(function(){}).then(function(){nsBusy=false})}
 function snoozeNative(x,m){
@@ -910,7 +843,7 @@ function snoozeNative(x,m){
   LN.schedule({notifications:[{id:1000+x.id,title:nm()+": "+ti,body:bo,channelId:CH,smallIcon:"ic_stat_paw",actionTypeId:x.rec?"BOOK":bd?"BUNDLE":"DUE",
     ongoing:true,autoCancel:false,extra:{id:x.id},schedule:{at:new Date(Date.now()+m*6e4),allowWhileIdle:true}}]}).catch(function(){})}
 if(LN){try{
-  LN.createChannel({id:CH,name:"Reminders",description:"Meals, medication, injections and vet visits",importance:4,visibility:1,vibration:true}).catch(function(){});
+  LN.createChannel({id:CH,name:"Reminders",description:"Overdue medication and vet visits",importance:4,visibility:1,vibration:true}).catch(function(){});
   LN.registerActionTypes({types:[{id:"DUE",actions:[{id:"done",title:"Done"},{id:"snooze",title:"Snooze 30 min"}]},{id:"BUNDLE",actions:[{id:"done",title:"Done all"},{id:"snooze",title:"Snooze 30 min"}]},{id:"BOOK",actions:[{id:"booked",title:"Booked"},{id:"tomorrow",title:"Remind tomorrow"}]}]}).catch(function(){});
   LN.addListener("localNotificationActionPerformed",function(ev){
     var id=ev&&ev.notification&&ev.notification.extra&&ev.notification.extra.id,x=S.items.filter(function(i){return i.id===id})[0];
@@ -984,7 +917,9 @@ setInterval(function(){
   S.items.forEach(function(x){if(snoozed[x.id]&&!open(x))delete snoozed[x.id]});
   if(!Object.keys(TP).some(function(i){return TP[i].open})&&!$("ed").classList.contains("on")&&!Object.keys(VE).length)render();
 },20000);
-render();view();
+document.addEventListener("visibilitychange",function(){if(!document.hidden)widgetDrain()});
+window.addEventListener("focus",widgetDrain);
+render();view();widgetDrain();
 </script>
 </body>
 </html>
