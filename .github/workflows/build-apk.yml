@@ -24,7 +24,18 @@ jobs:
           java-version: 17
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          ok=0
+          for i in 1 2 3; do
+            npm install && ok=1 && break
+            echo "npm install failed, retrying ($i/3)..."
+            sleep 20
+          done
+          if [ "$ok" = 0 ]; then
+            echo "Falling back to install without native build scripts (icon generation may be skipped)"
+            npm install --ignore-scripts
+          fi
+          [ -d node_modules/@capacitor/local-notifications ] || { echo "install failed"; exit 1; }
 
       - name: Earlier reminders disappear when the next one for the same item arrives
         run: |
