@@ -62,6 +62,34 @@ jobs:
           sed -i 's#<application#<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <application#' "$M"
           grep -n "uses-permission" "$M"
 
+      - name: Home screen widget
+        run: |
+          G=android/app/build.gradle
+          PKG=$(sed -n 's/.*namespace[ =]*"\([^"]*\)".*/\1/p' "$G" | head -1)
+          [ -n "$PKG" ] || PKG=$(sed -n 's/.*applicationId[ =]*"\([^"]*\)".*/\1/p' "$G" | head -1)
+          echo "Package: $PKG"
+          [ -n "$PKG" ] || { echo "Could not find the app package"; exit 1; }
+          J=android/app/src/main/java/$(echo "$PKG" | tr . /)
+          R=android/app/src/main/res
+          mkdir -p "$J" "$R/layout" "$R/xml" "$R/drawable"
+          for f in MainActivity BruceWidgetPlugin BruceWidgetProvider; do
+            sed "s/__PKG__/$PKG/g" resources/widget/$f.java > "$J/$f.java"
+          done
+          cp resources/widget/bruce_widget.xml "$R/layout/bruce_widget.xml"
+          cp resources/widget/bruce_widget_info.xml "$R/xml/bruce_widget_info.xml"
+          cp resources/widget/widget_bg.xml "$R/drawable/widget_bg.xml"
+          cp resources/widget/widget_btn.xml "$R/drawable/widget_btn.xml"
+          sed "s/__PKG__/$PKG/g" resources/widget/receiver.xml > "$RUNNER_TEMP/receiver.xml"
+          python3 - android/app/src/main/AndroidManifest.xml "$RUNNER_TEMP/receiver.xml" <<'PY'
+          import sys
+          m, r = sys.argv[1], sys.argv[2]
+          s = open(m).read()
+          if "BruceWidgetProvider" not in s:
+              open(m, "w").write(s.replace("</application>", open(r).read() + "    </application>", 1))
+              print("receiver added")
+          PY
+          grep -n "BruceWidget" android/app/src/main/AndroidManifest.xml
+
       - name: Sync web app into Android project
         run: npx cap sync android
 
