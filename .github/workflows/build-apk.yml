@@ -63,7 +63,45 @@ jobs:
         run: npx cap add android
 
       - name: App icon (Bruce's photo)
-        run: npx capacitor-assets generate --android || echo "icon generation skipped"
+        run: |
+          ok=0
+          npx capacitor-assets generate --android && ok=1
+          # sharp's native download is flaky: rebuild it with retries, then via a mirror
+          if [ "$ok" = 0 ]; then
+            for i in 1 2 3; do
+              npm rebuild sharp && npx capacitor-assets generate --android && ok=1 && break
+              echo "icon generation failed, retrying ($i/3)..."
+              sleep 20
+            done
+          fi
+          if [ "$ok" = 0 ]; then
+            export npm_config_sharp_libvips_binary_host=https://npmmirror.com/mirrors/sharp-libvips
+            npm rebuild sharp && npx capacitor-assets generate --android && ok=1
+          fi
+          # last resort: build the launcher icons with ImageMagick
+          if [ "$ok" = 0 ]; then
+            echo "Falling back to ImageMagick for the app icon"
+            SRC=""
+            for f in assets/icon-only.png assets/icon.png resources/icon.png resources/icon-only.png assets/logo.png; do
+              [ -f "$f" ] && SRC="$f" && break
+            done
+            [ -n "$SRC" ] || SRC=$(ls assets/*.png resources/*.png 2>/dev/null | head -1)
+            echo "Icon source: $SRC"
+            if [ -n "$SRC" ]; then
+              command -v convert >/dev/null || sudo apt-get install -y imagemagick
+              R=android/app/src/main/res
+              for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+                n=${d%%:*}; px=${d##*:}
+                mkdir -p "$R/mipmap-$n"
+                convert "$SRC" -resize ${px}x${px}^ -gravity center -extent ${px}x${px} "$R/mipmap-$n/ic_launcher.png"
+                convert "$R/mipmap-$n/ic_launcher.png" \( -size ${px}x${px} xc:none -fill white -draw "circle $((px/2)),$((px/2)) $((px/2)),0" \) -compose DstIn -composite "$R/mipmap-$n/ic_launcher_round.png"
+                cp "$R/mipmap-$n/ic_launcher.png" "$R/mipmap-$n/ic_launcher_foreground.png"
+              done
+              rm -rf "$R/mipmap-anydpi-v26"
+            else
+              echo "No icon image found, keeping the default icon"
+            fi
+          fi
 
       - name: Notification icon and permissions
         run: |
