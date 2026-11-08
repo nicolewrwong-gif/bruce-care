@@ -151,7 +151,18 @@ jobs:
 
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: |
+          # Gradle download times out after 10s by default; allow 2 minutes and use the smaller -bin package
+          W=gradle/wrapper/gradle-wrapper.properties
+          sed -i 's/networkTimeout=[0-9]*/networkTimeout=120000/; s/-all\.zip/-bin.zip/' "$W"
+          grep -n "networkTimeout\|distributionUrl" "$W"
+          ok=0
+          for i in 1 2 3; do
+            ./gradlew assembleDebug && ok=1 && break
+            echo "Build failed, retrying ($i/3)..."
+            sleep 20
+          done
+          [ "$ok" = 1 ]
 
       - name: Show signing fingerprint (should be the same every build)
         run: keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | grep -i "SHA256" || true
