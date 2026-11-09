@@ -677,7 +677,7 @@ function renderMain(){
     nx.append(el("small","","Next up for "+nm()),bigEl(best));
     var bp=[];if(best.dose)bp.push(best.dose);
     if(mm(best)){
-      if(!medShow(best)){var tm=best.ts>0&&ymd(new Date(best.ts))!==ymd(new Date());bp.push("Due "+(tm?"tomorrow ":"")+f(best.t))}
+      if(!medShow(best)){var tm=best.ts>0&&ymd(new Date(best.ts))!==ymd(new Date());bp.push("Give by "+(tm?"tomorrow ":"")+f(best.t))}
       else{var lm0=lateMin(best);if(lm0)bp.push("Overdue "+dur(lm0))}
     }
     if(bp.length)nx.append(el("small","",bp.join(" · ")));
@@ -1259,39 +1259,44 @@ function plan(){
   var out=[],now=Date.now(),nd=new Date(),H=36e5,cnt={};
   function at(off,t){var m=mins(t);return new Date(nd.getFullYear(),nd.getMonth(),nd.getDate()+off,Math.floor(m/60),m%60).getTime()}
   function nxt(t){var a=at(0,t);return a>now?a:at(1,t)}
+  function hm(ts){var d=new Date(ts);return f(("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2))}
+  function ob(x,lt,t,l){return lt+" · was due "+t+(l||(x.dose?" · "+x.dose:""))}
   function lateLbl(m){m=Math.max(1,Math.round(m));return(m>=60?Math.round(m/60)+(Math.round(m/60)===1?" hour":" hours"):m+" min")+" late"}
-  function add(x,w,body,act,end,ttl,bt){if(w>now&&w<now+45*864e5){var c=cnt[x.id]=Math.min((cnt[x.id]||0)+1,99);out.push({at:w,id:x.id,nid:2000+x.id*100+c,title:nm()+": "+(ttl||(x.rec?"Book Pentosan appointment":x.n)),body:body,act:act!==false,end:end||0,typ:x.rec?"BOOK":bt?"BUNDLE":"DUE"})}}
+  function add(x,w,body,act,end,ttl,bt,cc){if(w>now&&w<now+45*864e5){var c=cc||(cnt[x.id]=Math.min((cnt[x.id]||0)+1,99));out.push({at:w,id:x.id,nid:2000+x.id*100+c,title:ttl||(x.rec?"Book Pentosan appointment":"OVERDUE: "+x.n),body:body,act:act!==false,end:end||0,typ:x.rec?"BOOK":bt?"BUNDLE":"DUE"})}}
   S.items.forEach(function(x){
-    var od=(x.dose?" · "+x.dose:"");
+    if(x.type==="Meal")return;
     if(x.dom||x.rec){
       if(x.rec&&x.booked)return;var due=x.rec?recDue(x):nextDue(x);if(!due)return;
       var T=new Date(due.getFullYear(),due.getMonth(),due.getDate(),Math.floor(mins(x.t)/60),mins(x.t)%60).getTime();
-      if(T>now)add(x,T,msg(x));
-      else if(open(x)){var n1=nxt(x.t);add(x,n1,msg(x));add(x,n1+864e5,msg(x))}
-    }else if(x.type==="Meal"){
-      [0,1,2].forEach(function(d){if(d===0&&!open(x))return;add(x,at(d,x.s),msg(x),true,at(d,x.e)+(mins(x.e)<=mins(x.s)?864e5:0))});
+      if(T<=now&&open(x)){var n1=nxt(x.t);add(x,n1,msg(x));add(x,n1+864e5,msg(x))}
     }else if(x.grp){
       if(x.dyn){
         if(!(x.ts>0))return;
-        [x.ts,x.ts+2*H,x.ts+3*H].forEach(function(w,i){if(i)add(x,w,x.dose||"Time to give",true,0,x.n+", "+lateLbl(i===1?120:180));else add(x,w-4*H,msg(x))});
-        if(open(x)&&x.ts+3*H<=now)add(x,Math.ceil(now/H)*H,x.dose||"Time to give",true,0,x.n+", "+lateLbl((Math.ceil(now/H)*H-x.ts)/6e4));
+        [x.ts+2*H,x.ts+3*H].forEach(function(w,i){add(x,w,ob(x,lateLbl(i?180:120),hm(x.ts)),true,0,"OVERDUE: "+x.n)});
+        if(open(x)&&x.ts+3*H<=now)add(x,Math.ceil(now/H)*H,ob(x,lateLbl((Math.ceil(now/H)*H-x.ts)/6e4),hm(x.ts)),true,0,"OVERDUE: "+x.n);
       }else{
-        var bd=medBundle(x);
+        var bd=medBundle(x),lt=lateLbl(((mins(x.e)-mins(x.t))+1440)%1440);
         if(bd){
           if(bd.items[0]!==x)return;
-          [0,1,2].forEach(function(d){var lst=d===0?bd.items.filter(open):bd.items;if(lst.length)add(x,at(d,x.s),bundleBody(lst),true,0,bd.title,1)});
-          var op=bd.items.filter(open);
-          if(op.length)add(x,at(0,x.e),bundleBody(op),true,0,bd.title+", "+lateLbl(((mins(x.e)-mins(x.t))+1440)%1440),1);
+          [0,1,2].forEach(function(d){var lst=d===0?bd.items.filter(open):bd.items;if(lst.length)add(x,at(d,x.e),lt+" · was due "+f(x.t)+" · "+bundleBody(lst),true,0,"OVERDUE: "+bd.title,1,d+1)});
         }else{
-          [0,1,2].forEach(function(d){if(d===0&&!open(x))return;add(x,at(d,x.s),msg(x))});
-          if(open(x))add(x,at(0,x.e),x.dose||"Time to give",true,0,x.n+", "+lateLbl(((mins(x.e)-mins(x.t))+1440)%1440));
+          [0,1,2].forEach(function(d){if(d===0&&!open(x))return;add(x,at(d,x.e),ob(x,lt,f(x.t)),true,0,"OVERDUE: "+x.n,0,d+1)});
         }
       }
     }
   });
+  /* day before a vet visit, 9:00 */
   S.vet.forEach(function(v){
-    var p=v.d.split("-"),q=v.tm.split(":"),w=new Date(+p[0],+p[1]-1,+p[2],+q[0],+q[1]).getTime()-H;
-    if(w>now)out.push({at:w,id:"vet"+v.id,nid:500000+(+v.id%500000),title:nm()+": "+v.t,body:"Vet visit in 1 hour · "+f(v.tm)+(v.n?" · "+v.n:""),act:false});
+    var p=v.d.split("-"),w=new Date(+p[0],+p[1]-1,+p[2]-1,9,0).getTime();
+    if(w>now)out.push({at:w,id:"vet"+v.id,nid:500000+(+v.id%500000),title:"Vet tomorrow, "+f(v.tm),body:v.t+(v.n?" · "+v.n:""),act:false});
+  });
+  /* medication change, 8:00 on the day it starts */
+  S.meds.forEach(function(e){
+    if(!e.d||e.base)return;
+    var p=e.d.split("-"),w=new Date(+p[0],+p[1]-1,+p[2],8,0).getTime();
+    if(!(w>now))return;
+    var es=medEnts(e.n),ix=es.indexOf(e),pv=ix>0?es[ix-1]:null;
+    out.push({at:w,id:"med"+e.id,nid:600000+(+e.id%300000),title:pv?"Dose change today":"New medication today",body:e.n+": "+(pv?pv.dose+" → "+e.dose:e.dose)+(e.note?" · "+e.note:""),act:false})
   });
   out.sort(function(a,b){return a.at-b.at});
   var lastOf={};
@@ -1319,7 +1324,7 @@ function nativeSync(){
       var x=itemOfId(i);return!x||!openN(x)}).map(function(n){return{id:n.id}});
     return ids.length?LN.cancel({notifications:ids}):0})
   .then(function(){
-    var list=pl.map(function(p){return{id:p.nid,title:p.title,body:p.body,channelId:CH,smallIcon:"ic_stat_paw",
+    var list=pl.map(function(p){return{id:p.nid,title:p.title,body:p.body,channelId:CH,smallIcon:"ic_stat_paw",iconColor:p.act?"#E24B4A":undefined,
       ongoing:!!p.act,autoCancel:!p.act,
       actionTypeId:p.act?p.typ:undefined,extra:{id:p.id,timeoutMs:p.to||0},schedule:{at:new Date(p.at),allowWhileIdle:true}}});
     return list.length?LN.schedule({notifications:list}):0})
@@ -1330,8 +1335,8 @@ function nativeSync(){
   .then(function(){nsSig=sig}).catch(function(){}).then(function(){nsBusy=false})}
 function snoozeNative(x,m){
   if(!LN)return;
-  var bd=medBundle(x),ti=bd?bd.title:(x.rec?"Book Pentosan appointment":x.n),bo=bd?"Snoozed · "+bundleBody(bd.items.filter(open)):(x.rec?msg(x):"Snoozed · "+msg(x));
-  LN.schedule({notifications:[{id:1000+x.id,title:nm()+": "+ti,body:bo,channelId:CH,smallIcon:"ic_stat_paw",actionTypeId:x.rec?"BOOK":bd?"BUNDLE":"DUE",
+  var bd=medBundle(x),ti=x.rec?"Book Pentosan appointment":"OVERDUE: "+(bd?bd.title:x.n),bo=bd?"Snoozed · "+bundleBody(bd.items.filter(open)):(x.rec?msg(x):"Snoozed · "+msg(x));
+  LN.schedule({notifications:[{id:1000+x.id,title:ti,body:bo,channelId:CH,smallIcon:"ic_stat_paw",actionTypeId:x.rec?"BOOK":bd?"BUNDLE":"DUE",
     ongoing:true,autoCancel:false,extra:{id:x.id},schedule:{at:new Date(Date.now()+m*6e4),allowWhileIdle:true}}]}).catch(function(){})}
 if(LN){try{
   LN.createChannel({id:CH,name:"Reminders",description:"Meals, medication, injections and vet visits",importance:4,visibility:1,vibration:true}).catch(function(){});
@@ -1359,6 +1364,8 @@ function widgetSync(){
       if(x.grp&&x.dyn&&x.ts>0)due=x.ts;
       else if(!x.dom&&!x.rec&&x.t){var m=mins(x.t);due=new Date(nd.getFullYear(),nd.getMonth(),nd.getDate(),Math.floor(m/60),m%60).getTime()}
       var o={id:x.id,n:x.n,s:sub(x),od:due>0?now>=due:false};
+      var bd0=null;try{bd0=medBundle(x)}catch(e){}
+      o.ck=(x.grp&&!x.dyn&&!x.dom&&!x.rec)?1:99;o.own=bd0?bd0.items[0].id:x.id;
       if(due>0){o.due=due;if(x.dose)o.dz=x.dose}
       return{o:o,k:due||now}}).sort(function(a,b){return a.k-b.k}).slice(0,5).map(function(r){return r.o});
     var sig=JSON.stringify(list);if(sig===bwSig)return;bwSig=sig;
