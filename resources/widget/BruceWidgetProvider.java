@@ -51,15 +51,27 @@ public class BruceWidgetProvider extends AppWidgetProvider {
     static void handleDone(Context c, int itemId) {
         if (itemId < 0) return;
         boolean cancel = true;
+        int owner = itemId;
+        int ck = 99;
         synchronized (LOCK) {
             try {
                 SharedPreferences p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
                 JSONArray items = new JSONArray(p.getString("items", "[]"));
                 JSONArray keep = new JSONArray();
+                JSONObject target = null;
                 for (int k = 0; k < items.length(); k++) {
                     JSONObject o = items.getJSONObject(k);
-                    if (o.optInt("id", -1) == itemId) cancel = o.optBoolean("cx", false);
+                    if (o.optInt("id", -1) == itemId) target = o;
                     else keep.put(o);
+                }
+                if (target != null) {
+                    owner = target.optInt("own", itemId);
+                    ck = target.optInt("ck", 99);
+                    // Medicines sharing one grouped reminder: only cancel it once the last one is done.
+                    for (int k = 0; k < keep.length(); k++) {
+                        JSONObject o = keep.getJSONObject(k);
+                        if (o.optInt("own", o.optInt("id", -1)) == owner) cancel = false;
+                    }
                 }
                 JSONArray q = new JSONArray(p.getString("queue", "[]"));
                 JSONObject e = new JSONObject();
@@ -69,19 +81,19 @@ public class BruceWidgetProvider extends AppWidgetProvider {
                 p.edit().putString("items", keep.toString()).putString("queue", q.toString()).commit();
             } catch (Exception ignored) {}
         }
-        if (cancel) cancelReminders(c, itemId);
+        if (cancel) cancelReminders(c, owner, ck);
         refresh(c);
     }
 
     // Best effort: stop pending overdue reminders for this item. If it fails, the app
     // clears them the next time it opens.
-    static void cancelReminders(Context c, int itemId) {
+    static void cancelReminders(Context c, int itemId, int maxK) {
         try {
             Class<?> cls = Class.forName("com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher");
             AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
             NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
             int base = 2000 + itemId * 100;
-            for (int k = 0; k <= 99; k++) {
+            for (int k = 0; k <= maxK; k++) {
                 int nid = k == 0 ? 1000 + itemId : base + k;
                 Intent in = new Intent(c, cls);
                 PendingIntent pi = PendingIntent.getBroadcast(c, nid, in,
@@ -136,7 +148,7 @@ public class BruceWidgetProvider extends AppWidgetProvider {
                 od = now >= due;
                 String t = DateFormat.getTimeFormat(c).format(new Date(due));
                 String dz = o.optString("dz", "");
-                sub = (od ? "Overdue, was due " : "Due ") + t + (dz.isEmpty() ? "" : " · " + dz);
+                sub = (od ? "Overdue, was due " : "Give by ") + t + (dz.isEmpty() ? "" : " · " + dz);
             }
             v.setViewVisibility(ROW[i], View.VISIBLE);
             v.setTextViewText(NAME[i], o.optString("n", ""));
