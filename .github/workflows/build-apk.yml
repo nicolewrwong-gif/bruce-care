@@ -128,6 +128,25 @@ jobs:
           cp resources/widget/bruce_widget_info.xml "$R/xml/bruce_widget_info.xml"
           cp resources/widget/widget_bg.xml "$R/drawable/widget_bg.xml"
           cp resources/widget/widget_btn.xml "$R/drawable/widget_btn.xml"
+          # Bruce's photo for the widget header (round, 192px)
+          SRC=""
+          for f in assets/icon-only.png assets/icon.png resources/icon.png resources/icon-only.png assets/logo.png; do
+            [ -f "$f" ] && SRC="$f" && break
+          done
+          [ -n "$SRC" ] || SRC=$(ls assets/*.png resources/*.png 2>/dev/null | head -1)
+          echo "Widget photo source: $SRC"
+          mkdir -p "$R/drawable-nodpi"
+          P="$R/drawable-nodpi/bruce_photo.png"
+          if [ -n "$SRC" ]; then
+            command -v convert >/dev/null || sudo apt-get install -y imagemagick >/dev/null 2>&1 || true
+            if command -v convert >/dev/null; then
+              convert "$SRC" -resize 192x192^ -gravity center -extent 192x192 \( -size 192x192 xc:none -fill white -draw "circle 96,96 96,0" \) -compose DstIn -composite "$P" || rm -f "$P"
+            fi
+          fi
+          if [ ! -f "$P" ]; then
+            echo "No widget photo made, using a blank placeholder"
+            python3 -c "import struct,zlib;c=lambda t,d:struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff);open('$P','wb').write(b'\x89PNG\r\n\x1a\n'+c(b'IHDR',struct.pack('>IIBBBBB',1,1,8,6,0,0,0))+c(b'IDAT',zlib.compress(b'\x00\x00\x00\x00\x00'))+c(b'IEND',b''))"
+          fi
           sed "s/__PKG__/$PKG/g" resources/widget/receiver.xml > "$RUNNER_TEMP/receiver.xml"
           python3 - android/app/src/main/AndroidManifest.xml "$RUNNER_TEMP/receiver.xml" <<'PY'
           import sys
