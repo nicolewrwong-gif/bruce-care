@@ -134,6 +134,13 @@ h2.sh{font-size:20px;font-weight:600;letter-spacing:-.03em;text-transform:none;c
 #health ul{gap:0}
 #health .r{margin:0}
 
+#upd{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);max-width:408px;margin:0 auto;background:var(--accent);color:var(--on);border-radius:20px;padding:16px;display:none;z-index:8;box-shadow:0 12px 32px rgba(0,0,0,.2)}
+#upd.on{display:block}
+#upd p{margin:0 0 12px;font-size:14px;line-height:1.4}
+#upd button{background:#fff;color:#111;font-weight:500;padding:8px 18px;font-size:14px}
+#upd button.quiet{background:none;color:#ddd}
+#upd button:disabled{opacity:.6}
+
 /* bottom tab bar */
 #tabs{position:fixed;left:0;right:0;bottom:0;z-index:4;display:flex;background:var(--bg);border-top:1px solid var(--line);padding:10px 8px calc(10px + env(safe-area-inset-bottom,0px))}
 #tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;color:var(--sub);text-decoration:none;font-size:12.5px;font-weight:500;-webkit-tap-highlight-color:transparent}
@@ -304,6 +311,7 @@ ol.aids .n{flex:0 0 34px;height:34px;border-radius:50%;background:var(--accent);
 </head>
 <body>
 <div id="ed" role="dialog" aria-modal="true"></div>
+<div id="upd" role="status"></div>
 <div class="mb" id="namebox"><div class="md" role="dialog" aria-modal="true" aria-labelledby="nmt">
   <p class="t" id="nmt">What’s your name?</p>
   <p class="empty" style="margin:0 0 14px">You’ll only enter this once.</p>
@@ -786,7 +794,7 @@ function renderMain(){
     if(open1){
       var dt=el("div","rgd");
       res.forEach(function(r,j){
-        var line=el("div","rgl"),nmx=el("span","",NM[j]),v=el("span","",r.g?ft(r.g.at)+(r.late?" (late)":""):r.sk?"Skipped":"No entry");
+        var line=el("div","rgl"),nmx=el("span","",NM[j]),v=el("span","",r.g?ft(r.g.at)+(r.late?" (late)":""):r.sk?"Skipped":"\u2013");
         if(!r.g)v.style.color="var(--sub)";
         var eb=el("button","quiet","Edit");eb.style.cssText="font-size:13px;padding:4px 8px;margin-left:4px";eb.setAttribute("aria-label","Edit "+NM[j]+" for "+label);
         eb.onclick=function(ev){ev.stopPropagation();openEd(r.c,k)};
@@ -1352,6 +1360,30 @@ if(LN){try{
     .then(function(){return LN.checkExactNotificationSetting?LN.checkExactNotificationSetting().then(function(r){if(r&&r.exact_alarm&&r.exact_alarm!=="granted"&&LN.changeExactNotificationSetting)return LN.changeExactNotificationSetting()}):0})
     .then(function(){nsSig="";nativeSync()}).catch(function(){nsSig="";nativeSync()});
 }catch(e){}}
+
+/* ---- self-update (checks the latest GitHub release) ---- */
+var BU=null,updBusy=false,updAt=0,updSkip=0,updR=null;
+try{if(NATIVE)BU=(Capacitor.Plugins&&Capacitor.Plugins.BruceUpdate)||Capacitor.registerPlugin("BruceUpdate")}catch(e){}
+function updShow(text){
+  var u=$("upd");if(!u||!updR)return;u.textContent="";
+  u.append(el("p","",text||("A new version of the app is ready"+(updR.versionName?" ("+updR.versionName+")":"")+". Your data stays on this phone.")));
+  var row=el("div","row");row.style.cssText="gap:8px;align-items:center";
+  var go=el("button","",updBusy?"Downloading…":"Update now"),later=el("button","quiet","Later");
+  go.style.flex=later.style.flex="0 0 auto";go.disabled=updBusy;later.disabled=updBusy;
+  go.onclick=function(){
+    updBusy=true;updShow();
+    BU.install().then(function(){updBusy=false;$("upd").classList.remove("on")})
+      .catch(function(e){updBusy=false;updShow((e&&e.message)||"Couldn’t download the update. Try again.")})};
+  later.onclick=function(){updSkip=updR.latest;$("upd").classList.remove("on")};
+  row.append(go,later);u.append(row);u.classList.add("on")}
+function updCheck(force){
+  if(!BU||updBusy)return;
+  if(!force&&Date.now()-updAt<3600000)return;
+  updAt=Date.now();
+  BU.check().then(function(r){if(r&&r.available&&r.latest!==updSkip){updR=r;updShow()}}).catch(function(){})}
+if(BU){
+  setTimeout(function(){updCheck(true)},2500);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)updCheck(false)})}
 
 /* ---- home screen widget bridge ---- */
 var BW=null,bwSig="";
