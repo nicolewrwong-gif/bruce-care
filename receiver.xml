@@ -1,9 +1,0 @@
-        <receiver android:name="__PKG__.BruceWidgetProvider" android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/bruce_widget_info" />
-        </receiver>
-        <provider android:name="__PKG__.BruceFileProvider" android:authorities="__PKG__.updateprovider" android:exported="false" android:grantUriPermissions="true">
-            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths" />
-        </provider>
