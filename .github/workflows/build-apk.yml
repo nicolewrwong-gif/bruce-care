@@ -108,7 +108,7 @@ jobs:
           mkdir -p android/app/src/main/res/drawable
           cp resources/ic_stat_paw.xml android/app/src/main/res/drawable/
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<application#<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <application#' "$M"
+          sed -i 's#<application#<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <application#' "$M"
           grep -n "uses-permission" "$M"
 
       - name: Home screen widget
@@ -121,13 +121,14 @@ jobs:
           J=android/app/src/main/java/$(echo "$PKG" | tr . /)
           R=android/app/src/main/res
           mkdir -p "$J" "$R/layout" "$R/xml" "$R/drawable"
-          for f in MainActivity BruceWidgetPlugin BruceWidgetProvider; do
-            sed "s/__PKG__/$PKG/g" resources/widget/$f.java > "$J/$f.java"
+          for f in MainActivity BruceWidgetPlugin BruceWidgetProvider BruceUpdatePlugin BruceFileProvider; do
+            sed "s|__PKG__|$PKG|g; s|__REPO__|$GITHUB_REPOSITORY|g" resources/widget/$f.java > "$J/$f.java"
           done
           cp resources/widget/bruce_widget.xml "$R/layout/bruce_widget.xml"
           cp resources/widget/bruce_widget_info.xml "$R/xml/bruce_widget_info.xml"
           cp resources/widget/widget_bg.xml "$R/drawable/widget_bg.xml"
           cp resources/widget/widget_btn.xml "$R/drawable/widget_btn.xml"
+          cp resources/widget/update_paths.xml "$R/xml/update_paths.xml"
           # Bruce's photo for the widget header (round, 192px)
           SRC=""
           for f in assets/icon-only.png assets/icon.png resources/icon.png resources/icon-only.png assets/logo.png; do
@@ -196,5 +197,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp android/app/build/outputs/apk/debug/app-debug.apk bruce-care.apk
+          # The installed app reads this to learn whether a newer build exists
+          echo '{"versionCode":${{ github.run_number }},"versionName":"1.${{ github.run_number }}"}' > latest.json
           gh release delete latest --cleanup-tag -y || true
-          gh release create latest bruce-care.apk --title "Bruce Care (latest)" --notes "Debug build $(date -u +%F)" --target "${{ github.sha }}"
+          gh release create latest bruce-care.apk latest.json --title "Bruce Care (latest)" --notes "Debug build $(date -u +%F)" --target "${{ github.sha }}"
