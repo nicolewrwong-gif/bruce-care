@@ -1632,13 +1632,18 @@ function noteForm(k,label){
   var r=el("div","row");r.append(sv);if(ex)r.append(rm);r.append(cn);
   var w=el("div");w.append(el("label","","Note for this day"),nI);
   ed.append(el("p","","Note "+String.fromCharCode(183)+" "+label),w,r);ed.classList.add("on");setTimeout(function(){nI.focus()},30)}
-// Cleanup: removes the marks left by the old seeded "Accidental double dose" entries (entries are kept)
+// Cleanup: removes the old seeded "Accidental double dose" marks (entries are kept) and
+// every double dose / extra dose on Wed 4 Nov 2026 (the first dose of the day stays).
 function unseedFri(){
   var ch=false;
+  function drop(e){S.del[tk("l",lkey(e))]=Date.now();S.log=S.log.filter(function(y){return y!==e});ch=true}
   S.log.filter(function(e){return e.dd&&!e.x&&e.note==="Accidental double dose"}).forEach(function(e){
-    S.del[tk("l",lkey(e))]=Date.now();
-    S.log=S.log.filter(function(y){return y!==e});
-    S.log.push({n:e.n,type:e.type,by:e.by||S.me||"",at:e.at,ct:Date.now()+1,skipped:e.skipped?1:undefined});ch=true});
+    drop(e);S.log.push({n:e.n,type:e.type,by:e.by||S.me||"",at:e.at,ct:Date.now()+1,skipped:e.skipped?1:undefined})});
+  var day=S.log.filter(function(e){return ekey(e)==="2026-11-04"&&!e.skipped});
+  day.filter(function(e){return e.x||e.dd}).forEach(drop);
+  var first={};
+  day.filter(function(e){return!e.x&&!e.dd&&e.type==="Medication"}).sort(function(a,b){return a.at-b.at}).forEach(function(e){
+    if(first[e.n])drop(e);else first[e.n]=1});
   if(ch){srt();save()}}
 
 function openEd(c,k){
