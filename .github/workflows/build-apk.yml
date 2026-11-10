@@ -121,7 +121,7 @@ jobs:
           J=android/app/src/main/java/$(echo "$PKG" | tr . /)
           R=android/app/src/main/res
           mkdir -p "$J" "$R/layout" "$R/xml" "$R/drawable"
-          for f in MainActivity BruceWidgetPlugin BruceWidgetProvider BruceUpdatePlugin BruceFileProvider; do
+          for f in MainActivity BruceWidgetPlugin BruceWidgetProvider BruceUpdatePlugin BruceFileProvider BruceInstallReceiver; do
             sed "s|__PKG__|$PKG|g; s|__REPO__|$GITHUB_REPOSITORY|g" resources/widget/$f.java > "$J/$f.java"
           done
           cp resources/widget/bruce_widget.xml "$R/layout/bruce_widget.xml"
