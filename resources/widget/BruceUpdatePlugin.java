@@ -1,11 +1,12 @@
 package __PKG__;
 
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageInstaller;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
-import androidx.core.content.FileProvider;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -111,11 +112,25 @@ public class BruceUpdatePlugin extends Plugin {
                     call.reject("Download was incomplete. Try again.");
                     return;
                 }
-                Uri uri = FileProvider.getUriForFile(getContext(), "__PKG__.updateprovider", apk);
-                Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setDataAndType(uri, "application/vnd.android.package-archive");
-                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                getContext().startActivity(i);
+                PackageInstaller pi = getContext().getPackageManager().getPackageInstaller();
+                PackageInstaller.SessionParams sp =
+                    new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+                if (Build.VERSION.SDK_INT >= 31)
+                    sp.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+                int sid = pi.createSession(sp);
+                try (PackageInstaller.Session s = pi.openSession(sid)) {
+                    try (InputStream in = new java.io.FileInputStream(apk);
+                         OutputStream out = s.openWrite("bruce-care.apk", 0, apk.length())) {
+                        byte[] buf = new byte[65536];
+                        int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        s.fsync(out);
+                    }
+                    Intent cb = new Intent(getContext(), BruceInstallReceiver.class);
+                    PendingIntent pend = PendingIntent.getBroadcast(getContext(), sid, cb,
+                        PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0));
+                    s.commit(pend.getIntentSender());
+                }
                 call.resolve();
             } catch (Exception e) {
                 call.reject("Couldn't download the update: " + e.getMessage());

@@ -4,6 +4,7 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/bruce_widget_info" />
         </receiver>
+        <receiver android:name="__PKG__.BruceInstallReceiver" android:exported="false" />
         <provider android:name="__PKG__.BruceFileProvider" android:authorities="__PKG__.updateprovider" android:exported="false" android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths" />
         </provider>

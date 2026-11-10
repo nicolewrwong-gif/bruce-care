@@ -21,6 +21,7 @@ import org.json.JSONObject;
 public class BruceWidgetProvider extends AppWidgetProvider {
     static final String PREFS = "bruce_widget";
     static final String ACTION_DONE = "__PKG__.WIDGET_DONE";
+    static final String ACTION_TICK = "__PKG__.WIDGET_TICK";
     static final Object LOCK = new Object();
 
     static final int[] ROW = {R.id.r1, R.id.r2, R.id.r3, R.id.r4, R.id.r5};
@@ -37,6 +38,10 @@ public class BruceWidgetProvider extends AppWidgetProvider {
     public void onReceive(Context c, Intent i) {
         if (i != null && ACTION_DONE.equals(i.getAction())) {
             handleDone(c, i.getIntExtra("id", -1));
+            return;
+        }
+        if (i != null && ACTION_TICK.equals(i.getAction())) {
+            refresh(c);
             return;
         }
         super.onReceive(c, i);
@@ -165,6 +170,25 @@ public class BruceWidgetProvider extends AppWidgetProvider {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             v.setOnClickPendingIntent(BTN[i], dp);
         }
+        scheduleTick(c, items, now);
         m.updateAppWidget(widgetId, v);
+    }
+
+    // Redraw at the next due time so "Give by" flips to "Overdue" with the app closed.
+    static void scheduleTick(Context c, JSONArray items, long now) {
+        try {
+            long next = Long.MAX_VALUE;
+            for (int i = 0; i < Math.min(items.length(), ROW.length); i++) {
+                JSONObject o = items.optJSONObject(i);
+                long due = o == null ? 0 : o.optLong("due", 0);
+                if (due > now && due < next) next = due;
+            }
+            AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+            Intent t = new Intent(c, BruceWidgetProvider.class).setAction(ACTION_TICK);
+            PendingIntent pi = PendingIntent.getBroadcast(c, 7, t,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            am.cancel(pi);
+            if (next != Long.MAX_VALUE) am.set(AlarmManager.RTC, next + 1000, pi);
+        } catch (Throwable ignored) {}
     }
 }
