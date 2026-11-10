@@ -134,6 +134,14 @@ h2.sh{font-size:20px;font-weight:600;letter-spacing:-.03em;text-transform:none;c
 #health ul{gap:0}
 #health .r{margin:0}
 
+.star{font-weight:700;margin-left:1px}
+.rgx{margin:8px 0 6px;background:var(--ink);color:var(--on);border-radius:12px;padding:4px 14px}
+.rgxi{padding:10px 0;border-top:1px solid rgba(255,255,255,.25)}
+.rgxi:first-child{border-top:0}
+.rgxt{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border:1.5px solid currentColor;border-radius:999px;padding:2px 9px;margin-bottom:5px}
+.rgxs{font-size:10px;padding:1px 7px;margin:0 0 0 8px;vertical-align:middle}
+.rgxm{display:block;font-size:15px;font-weight:600}
+.rgxn{display:block;font-size:13px;opacity:.85;margin-top:2px}
 #upd{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);max-width:408px;margin:0 auto;background:var(--accent);color:var(--on);border-radius:20px;padding:16px;display:none;z-index:8;box-shadow:0 12px 32px rgba(0,0,0,.2)}
 #upd.on{display:block}
 #upd p{margin:0 0 12px;font-size:14px;line-height:1.4}
@@ -769,6 +777,7 @@ function renderMain(){
   var cols=[{g:"Meals",h:"Bkfst",ty:"Meal",re:/breakfast/i},{g:"Meals",h:"Dinner",ty:"Meal",re:/dinner/i},
     {g:"CBD oil",h:"AM",ty:"Medication",n:"CBD oil (AM)"},{g:"CBD oil",h:"PM",ty:"Medication",n:"CBD oil (PM)"},
     {g:"Forthyron",h:"AM",ty:"Medication",n:"Forthyron (AM)"},{g:"Forthyron",h:"PM",ty:"Medication",n:"Forthyron (PM)"}];
+  seedFri();
   var by={},t0=new Date();
   S.log.forEach(function(e){if(e.at>Date.now()+6e4)return;var k=dk(e);(by[k]=by[k]||[]).push(e)});
   var NM=["Breakfast","Dinner","CBD oil AM","CBD oil PM","Forthyron AM","Forthyron PM"];
@@ -783,10 +792,10 @@ function renderMain(){
     var res=cols.map(function(c){
       var es=list.filter(function(e){return e.type===c.ty&&(c.re?c.re.test(e.n):e.n===c.n)}),g=es.filter(function(e){return!e.skipped})[0];
       return{c:c,g:g,late:!!g&&isLate(g),sk:!g&&es.length>0}});
-    var label=i===0?"Today":i===1?"Yesterday":sd(pd(k)),open1=!!RX[k];
+    var label=i===0?"Today":i===1?"Yesterday":sd(pd(k)),open1=!!RX[k],nts=dayNotes(list);
     var row=el("div","rgr");row.setAttribute("role","button");row.setAttribute("tabindex","0");row.setAttribute("aria-expanded",open1?"true":"false");
-    row.setAttribute("aria-label",label+": "+res.map(function(r,j){return NM[j]+" "+(r.g?(r.late?"given late":"given"):r.sk?"skipped":"no entry")}).join(", "));
-    row.append(el("span","",label));
+    row.setAttribute("aria-label",label+": "+res.map(function(r,j){return NM[j]+" "+(r.g?(r.late?"given late":"given"):r.sk?"skipped":"no entry")}).join(", ")+(nts.length?". Includes "+nts.map(function(n){return n.k==="dd"?"double dose of "+n.name:"quick log "+n.name}).join(", "):""));
+    var ls=el("span","",label);if(nts.length)ls.append(" ",el("b","star","*"));row.append(ls);
     res.forEach(function(r){var c=el("span",""),d=el("i","dt "+(r.g?(r.late?"dl":"dg"):r.sk?"ds":"dn"));c.append(d);row.append(c)});
     function tg(){RX[k]=!RX[k];renderMain()}
     row.onclick=tg;row.onkeydown=function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();tg()}};
@@ -796,13 +805,12 @@ function renderMain(){
       res.forEach(function(r,j){
         var line=el("div","rgl"),nmx=el("span","",NM[j]),v=el("span","",r.g?ft(r.g.at)+(r.late?" (late)":""):r.sk?"Skipped":"\u2013");
         if(!r.g)v.style.color="var(--sub)";
+        if(r.g&&nts.some(function(n){return n.k==="dd"&&n.es.indexOf(r.g)>-1})){line.style.fontWeight="600";nmx.append(el("span","rgxt rgxs","Double"))}
         var eb=el("button","quiet","Edit");eb.style.cssText="font-size:13px;padding:4px 8px;margin-left:4px";eb.setAttribute("aria-label","Edit "+NM[j]+" for "+label);
         eb.onclick=function(ev){ev.stopPropagation();openEd(r.c,k)};
         var rt=el("span","");rt.style.cssText="display:flex;align-items:center";rt.append(v,eb);line.append(nmx,rt);dt.append(line);
       });
-      list.filter(function(e){return isOther(e)&&!e.skipped}).sort(function(a,b){return a.at-b.at}).forEach(function(e){
-        var qq=QL.filter(function(q){return q.n===e.n})[0],line=el("div","rgl");
-        line.append(el("span","",qq?qq.lab.replace(/ given$/,""):e.n),el("span","",ft(e.at)));dt.append(line)});
+      if(nts.length)dt.append(noteBox(nts));
       card.append(dt);
     }
   })(i)}
@@ -811,7 +819,7 @@ function renderMain(){
   tgb.onclick=function(){RMORE=!RMORE;renderMain()};card.append(tgb);
   var lg=el("div","rglg");
   [["dg","Given"],["dl","Given late"],["ds","Skipped"],["dn","No entry"]].forEach(function(x){var sp=el("span",""),d=el("i","dt "+x[0]);d.style.marginRight="6px";sp.append(d,document.createTextNode(x[1]));lg.append(sp)});
-  card.append(lg);rc.append(card);
+  lg.style.flexWrap="wrap";lg.append(el("span","","* Quick log or double dose"));card.append(lg);rc.append(card);
   var va=el("button","quiet","View all entries");va.type="button";va.style.cssText="display:block;margin:6px 0 0;padding:8px 0;font-size:13px;color:var(--sub);text-decoration:underline;text-underline-offset:3px";
   va.onclick=openAll;rc.append(va);
 
@@ -1157,13 +1165,15 @@ function renderAll(){
       var list=byDay[k]||[],tr=el("tr",""),dc=el("td","",pd(k).toLocaleDateString([],{weekday:"short",day:"numeric"}));
       list.filter(function(e){return QL.some(function(q){return q.n===e.n})&&!e.skipped}).sort(function(a,b){return a.at-b.at}).forEach(function(e){
         var qq=QL.filter(function(q){return q.n===e.n})[0];dc.append(el("small","",qq.lab.replace(/ given$/,"")+" "+fc(e.at)))});
+      var nn=dayNotes(list);if(nn.length)dc.firstChild.after(document.createTextNode(" *"));
+      nn.filter(function(n){return n.k==="dd"}).forEach(function(n){dc.append(el("small","","Double dose: "+n.name+" "+n.es.map(function(e){return fc(e.at)}).join(", ")))});
       tr.append(dc);
       ACOLS.forEach(function(c){
         var es=list.filter(function(e){return e.type===c.ty&&(c.re?c.re.test(e.n):e.n===c.n)}),g=es.filter(function(e){return!e.skipped})[0];
         tr.append(el("td",g?"":"sk",g?fc(g.at):es.length?"Skip":"\u2013"))});
       tb.append(tr)});
     t.append(tb);return t}
-  var note=el("p","anote","Times are 12-hour. CBD = CBD oil, For. = Forthyron. Skip = skipped, \u2013 = nothing logged.");
+  var note=el("p","anote","Times are 12-hour. CBD = CBD oil, For. = Forthyron. Skip = skipped, \u2013 = nothing logged, * = quick log or double dose that day.");
   months.forEach(function(m){var w=el("div","mblk");w.append(el("h3","amh",mlabel(m)),table(mm[m]));body.append(w)});
   body.append(note);
 }
@@ -1452,6 +1462,46 @@ function timePanel(x){
 function clockBtn(x,panel){
   var b=el("button","x");b.append(ic("Clock"));b.setAttribute("aria-label","Set when "+x.n+" was given");
   b.onclick=function(){var st=TP[x.id]||(TP[x.id]={});st.open=!st.open;panel.style.display=st.open?"":"none"};return b}
+/* ---- days with a quick log or a double dose ---- */
+function tf(ts){return new Date(ts).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true})}
+function dayNotes(list){
+  var out=[],dr={};
+  list.forEach(function(e){
+    if(e.skipped)return;
+    var q=QL.filter(function(q){return q.n===e.n})[0];
+    if(q)out.push({k:"quick",name:q.lab.replace(/ given$/,""),es:[e],note:""})});
+  ACOLS.forEach(function(c){
+    if(c.ty!=="Medication")return;
+    var es=list.filter(function(e){return e.type===c.ty&&e.n===c.n&&!e.skipped});
+    if(es.length>1||es.some(function(e){return e.dd}))es.forEach(function(e){
+      var nm=e.n.replace(/\s*\(.*\)/,"");dr[nm]=dr[nm]||[];if(dr[nm].indexOf(e)<0)dr[nm].push(e)})});
+  Object.keys(dr).forEach(function(nm){
+    var es=dr[nm].sort(function(a,b){return a.at-b.at});
+    out.push({k:"dd",name:nm,es:es,note:(es.filter(function(e){return e.note})[0]||{}).note||""})});
+  return out}
+function noteBox(nts){
+  var bx=el("div","rgx");
+  nts.forEach(function(n){
+    var it=el("div","rgxi");
+    it.append(el("span","rgxt",n.k==="dd"?"Double dose":"Quick log"),
+      el("span","rgxm",n.name+" "+String.fromCharCode(183)+" "+n.es.map(function(e){return tf(e.at)}).join(" and ")));
+    if(n.note)it.append(el("span","rgxn",n.note));
+    bx.append(it)});
+  return bx}
+// One-off: Friday 6 Nov 2026 accidental double dose of Forthyron (9:30 am and 12:30 pm)
+function seedFri(){
+  try{if(localStorage.getItem("seed_dd_20261106"))return}catch(e){}
+  var k="2026-11-06",ch=false;
+  [["Forthyron (AM)",9,30],["Forthyron (PM)",12,30]].forEach(function(a){
+    var at=r15(new Date(2026,10,6,a[1],a[2]).getTime());
+    var ex=S.log.filter(function(e){return e.n===a[0]&&ekey(e)===k&&!e.skipped});
+    if(ex.some(function(e){return e.at===at&&e.dd}))return;
+    ex.forEach(function(e){S.del[tk("l",lkey(e))]=Date.now()});
+    S.log=S.log.filter(function(e){return ex.indexOf(e)<0});
+    S.log.push({n:a[0],type:"Medication",by:S.me||"",at:at,ct:Date.now()+1,dd:1,note:"Accidental double dose"});ch=true});
+  if(ch){srt();save()}
+  try{localStorage.setItem("seed_dd_20261106","1")}catch(e){}}
+
 function openEd(c,k){
   var ed=$("ed"),nmI=c.n||(S.items.filter(function(x){return x.type==="Meal"&&c.re.test(x.n)})[0]||{}).n,it=S.items.filter(function(x){return x.n===nmI})[0];
   if(!it)return;
@@ -1465,7 +1515,7 @@ function openEd(c,k){
       var d=pd(k),q=tI.value.split(":"),h=+q[0];if(!tI.value){er.textContent="Pick a time.";er.style.display="block";return}
       var at=new Date(d.getFullYear(),d.getMonth(),d.getDate()+(/dinner/i.test(it.n)&&h<5?1:0),h,+q[1]).getTime();
       if(at>Date.now()+6e4){er.textContent="That time is in the future.";er.style.display="block";return}
-      ne={n:it.n,type:it.type,by:S.me,at:r15(at),ct:Date.now()};if(mode==="skip")ne.skipped=1}
+      ne={n:it.n,type:it.type,by:S.me,at:r15(at),ct:Date.now()};if(mode==="skip")ne.skipped=1;else if(cur&&cur.dd){ne.dd=1;if(cur.note)ne.note=cur.note}}
     var kept=false;
     S.log=S.log.filter(function(e){
       if(e.n===it.n&&ekey(e)===k){if(ne&&lkey(e)===lkey(ne)){kept=true;return true}S.del[tk("l",lkey(e))]=Date.now();return false}return true});
